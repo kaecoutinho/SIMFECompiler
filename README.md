@@ -12,6 +12,8 @@ _GNU GPL V2_
 
 The front-end compiler is mostly written in _C++_ and uses [_Boost_](http://www.boost.org) and [_DFA_](https://github.com/kaiky25/DFA) libraries as main dependencies.
 
+Check out [SIM's _BNF_ description](https://github.com/kaiky25/SIMFECompiler/blob/master/SIM%20Language%20BNF.pdf) to better understand its compiler.
+
 ## Usage
 
 #### No usage yet
