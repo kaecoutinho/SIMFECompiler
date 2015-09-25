@@ -1,0 +1,24 @@
+{
+    "name": "SIMFEIdentifiersRecognizer",
+    "description": "recognizes sim language's identifiers",
+    "alphabet": "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz",
+    "states": [{
+        "name": "q0",
+        "initial": true,
+        "final": false,
+        "recognitionMessage": "recognition failed",
+        "transitions": [{
+            "symbol": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+            "destination": "q1"
+        }]
+    }, {
+        "name": "q1",
+        "initial": false,
+        "final": true,
+        "recognitionMessage": "recognition succeed",
+        "transitions": [{
+            "symbol": "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz",
+            "destination": "q1"
+        }]
+    }]
+}

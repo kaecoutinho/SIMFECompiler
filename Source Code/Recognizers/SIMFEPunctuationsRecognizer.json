@@ -1,0 +1,93 @@
+{
+    "name": "SIMFEPunctuationsRecognizer",
+    "description": "recognizes sim language's punctuations",
+    "alphabet": "()+,-.:;=",
+    "states": [{
+        "name": "q0",
+        "initial": true,
+        "final": false,
+        "recognitionMessage": "recognition failed",
+        "transitions": [{
+            "symbol": ";",
+            "destination": "q1"
+        }, {
+            "symbol": ".",
+            "destination": "q4"
+        }, {
+            "symbol": ")",
+            "destination": "q6"
+        }, {
+            "symbol": ":",
+            "destination": "q2"
+        }, {
+            "symbol": "(",
+            "destination": "q5"
+        }, {
+            "symbol": ",",
+            "destination": "q9"
+        }]
+    }, {
+        "name": "q1",
+        "initial": false,
+        "final": true,
+        "recognitionMessage": "recognition succeed",
+        "transitions": []
+    }, {
+        "name": "q2",
+        "initial": false,
+        "final": true,
+        "recognitionMessage": "recognition succeed",
+        "transitions": [{
+            "symbol": "=",
+            "destination": "q3"
+        }, {
+            "symbol": "-",
+            "destination": "q8"
+        }, {
+            "symbol": "+",
+            "destination": "q7"
+        }]
+    }, {
+        "name": "q3",
+        "initial": false,
+        "final": true,
+        "recognitionMessage": "recognition succeed",
+        "transitions": []
+    }, {
+        "name": "q4",
+        "initial": false,
+        "final": true,
+        "recognitionMessage": "recognition succeed",
+        "transitions": []
+    }, {
+        "name": "q5",
+        "initial": false,
+        "final": true,
+        "recognitionMessage": "recognition succeed",
+        "transitions": []
+    }, {
+        "name": "q6",
+        "initial": false,
+        "final": true,
+        "recognitionMessage": "recognition succeed",
+        "transitions": []
+    }, {
+        "name": "q7",
+        "initial": false,
+        "final": true,
+        "recognitionMessage": "recognition succeed",
+        "transitions": []
+    }, {
+        "name": "q8",
+        "initial": false,
+        "final": true,
+        "recognitionMessage": "recognition succeed",
+        "transitions": []
+    }, {
+        "name": "q9",
+        "initial": false,
+        "final": true,
+        "recognitionMessage": "recognition succeed",
+        "transitions": []
+    }]
+}

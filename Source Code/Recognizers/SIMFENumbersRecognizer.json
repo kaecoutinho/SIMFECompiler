@@ -1,0 +1,24 @@
+{
+    "name": "SIMFENumbersRecognizer",
+    "description": "recognizes sim language's numbers",
+    "alphabet": "0123456789",
+    "states": [{
+        "name": "q0",
+        "initial": true,
+        "final": false,
+        "recognitionMessage": "recognition failed",
+        "transitions": [{
+            "symbol": "0123456789",
+            "destination": "q1"
+        }]
+    }, {
+        "name": "q1",
+        "initial": false,
+        "final": true,
+        "recognitionMessage": "recognition succeed",
+        "transitions": [{
+            "symbol": "0123456789",
+            "destination": "q1"
+        }]
+    }]
+}
