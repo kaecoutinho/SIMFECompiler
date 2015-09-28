@@ -116,12 +116,13 @@ void showOutput(bool failed, string fileName)
 {
 	if(!failed)
 	{
-		cout << "Successfully compiled" << ((fileName.length() > 0) ? (" " + fileName) : EMPTY_STRING) << endl;
-		cout << "No errors were found" << endl;
+		cout << BOLD_START << SEPARATOR << GREEN_TEXT_DEBUG_COLOR << BOLD_CONTINUES << "Successfully compiled" << ((fileName.length() > 0) ? (" " + fileName) : EMPTY_STRING) << BOLD_END << endl;
+		cout << BOLD_START << SEPARATOR << GREEN_TEXT_DEBUG_COLOR << BOLD_CONTINUES << "No errors were found" << BOLD_END << endl;
 	}
 	else
 	{
-		cout << "Could not compile" << ((fileName.length() > 0) ? (" " + fileName) : EMPTY_STRING) << endl;
+
+		cout << BOLD_START << SEPARATOR << RED_TEXT_DEBUG_COLOR << BOLD_CONTINUES << "Could not compile" << BOLD_END << endl;
 	}
 }
 
