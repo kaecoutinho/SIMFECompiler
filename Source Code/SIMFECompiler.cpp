@@ -12,6 +12,5 @@
 int main(int argumentsCount, char ** arguments)
 {
 	// Compiles the given SIM source code
-
 	return compileSIMSourceCode(argumentsCount,arguments);
 }
