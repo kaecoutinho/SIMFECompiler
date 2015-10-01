@@ -46,12 +46,12 @@ bool compileSIMSourceCode(int argumentsCount, char ** arguments)
 	}
 	catch(const char * exception)
 	{
-		cout << BOLD_START << SEPARATOR << RED_TEXT_DEBUG_COLOR << BOLD_CONTINUES << exception << BOLD_END << endl;
+		cout << CUSTOM_OUTPUT_START << BOLD << SEPARATOR << UNDERLINE << SEPARATOR << RED_TEXT_DEBUG_COLOR << CUSTOM_OUTPUT_CONTINUE << exception << CUSTOM_OUTPUT_END;
 		failed = true;
 	}
 	catch(const string exception)
 	{
-		cout << BOLD_START << SEPARATOR << RED_TEXT_DEBUG_COLOR << BOLD_CONTINUES << exception << BOLD_END << endl;
+		cout << CUSTOM_OUTPUT_START << BOLD << SEPARATOR << UNDERLINE << SEPARATOR << RED_TEXT_DEBUG_COLOR << CUSTOM_OUTPUT_CONTINUE << exception << CUSTOM_OUTPUT_END;
 		failed = true;
 	}
 	if(!overrideOutput)
@@ -116,13 +116,12 @@ void showOutput(bool failed, string fileName)
 {
 	if(!failed)
 	{
-		cout << BOLD_START << SEPARATOR << GREEN_TEXT_DEBUG_COLOR << BOLD_CONTINUES << "Successfully compiled" << ((fileName.length() > 0) ? (" " + fileName) : EMPTY_STRING) << BOLD_END << endl;
-		cout << BOLD_START << SEPARATOR << GREEN_TEXT_DEBUG_COLOR << BOLD_CONTINUES << "No errors were found" << BOLD_END << endl;
+		cout << CUSTOM_OUTPUT_START << BOLD << SEPARATOR << UNDERLINE << SEPARATOR << GREEN_TEXT_DEBUG_COLOR << CUSTOM_OUTPUT_CONTINUE << "Successfully compiled" << ((fileName.length() > 0) ? (" " + fileName) : EMPTY_STRING) << CUSTOM_OUTPUT_END;
+		cout << CUSTOM_OUTPUT_START << BOLD << SEPARATOR << GREEN_TEXT_DEBUG_COLOR << CUSTOM_OUTPUT_CONTINUE << " - No errors were found" << CUSTOM_OUTPUT_END << endl;
 	}
 	else
 	{
-
-		cout << BOLD_START << SEPARATOR << RED_TEXT_DEBUG_COLOR << BOLD_CONTINUES << "Could not compile" << BOLD_END << endl;
+		cout << CUSTOM_OUTPUT_START << BOLD << SEPARATOR << RED_TEXT_DEBUG_COLOR << CUSTOM_OUTPUT_CONTINUE << " - Could not compile" << CUSTOM_OUTPUT_END << endl;
 	}
 }
 
@@ -1140,5 +1139,5 @@ string findFixedAttibuteNameForToken(tokenType type, int attributeNumber)
 // Prints a message to the console in debug mode
 void debugToConsole(string message, int textColor, int backgroundColor)
 {
-	cout << BOLD_START << SEPARATOR << textColor << SEPARATOR << backgroundColor << BOLD_CONTINUES << message << BOLD_END << endl;
+	cout << CUSTOM_OUTPUT_START << BOLD << SEPARATOR << textColor << SEPARATOR << backgroundColor << CUSTOM_OUTPUT_CONTINUE << message << CUSTOM_OUTPUT_END << endl;
 }

@@ -11,7 +11,7 @@ PPMACROS = -DPROJECT_DIRECTORY_PATH='"$(PROJECT_DIRECTORY_PATH)"' -DMAKEFILE_PAT
 OUTPUT = SIMFECompiler
 OBJECTS = $(OUTPUT).o SIMFECompilerFunctions.o DFA.o DFABuilder.o State.o StateBuilder.o Transition.o
 CC = g++
-CFLAGS = -w ${PPMACROS}
+CFLAGS = -w ${PPMACROS} -I/usr/local/Cellar/boost/1.58.0/include/ -L/usr/local/Cellar/boost/1.58.0/lib
 LDFLAGS = -lboost_system -lboost_filesystem
 
 # Default target

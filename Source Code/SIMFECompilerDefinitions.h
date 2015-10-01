@@ -51,10 +51,12 @@
 #define BLUE_TEXT_DEBUG_COLOR 34
 #define BLACK_BACKGROUND_DEBUG_COLOR 40
 #define WHITE_BACKGROUND_DEBUG_COLOR 47
-#define BOLD_START "\e[1"
-#define BOLD_CONTINUES "m"
+#define CUSTOM_OUTPUT_START "\e["
+#define BOLD "1"
+#define UNDERLINE "4"
+#define CUSTOM_OUTPUT_CONTINUE "m"
 #define SEPARATOR ";"
-#define BOLD_END "\e[0m"
+#define CUSTOM_OUTPUT_END "\e[0m"
 
 // Recognizers constants
 
