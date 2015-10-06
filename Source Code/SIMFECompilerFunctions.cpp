@@ -29,7 +29,7 @@ bool compileSIMSourceCode(int argumentsCount, char ** arguments)
 			SIMFileNamePath = new path(SIMFilePath);
 			SIMFileName = SIMFileNamePath->filename().string();
 			SIMFile = readSIMFile(SIMFilePath);
-			SIMSourceCode = getSIMSourceCodeV2(SIMFile,true,false,false);
+			SIMSourceCode = getSIMSourceCode(SIMFile,true,false,false);
 			lexemes = getLexemesFromSIMSourceCode(SIMSourceCode,SIMFile);
 			tokens = lexicalAnalyzeSIMSourceCode(lexemes,SIMFileName);
 			failed = (tokens.size() == 0);
@@ -46,12 +46,12 @@ bool compileSIMSourceCode(int argumentsCount, char ** arguments)
 	}
 	catch(const char * exception)
 	{
-		cout << CUSTOM_OUTPUT_START << BOLD << SEPARATOR << UNDERLINE << SEPARATOR << RED_TEXT_DEBUG_COLOR << CUSTOM_OUTPUT_CONTINUE << exception << CUSTOM_OUTPUT_END;
+		cout << exception;
 		failed = true;
 	}
 	catch(const string exception)
 	{
-		cout << CUSTOM_OUTPUT_START << BOLD << SEPARATOR << UNDERLINE << SEPARATOR << RED_TEXT_DEBUG_COLOR << CUSTOM_OUTPUT_CONTINUE << exception << CUSTOM_OUTPUT_END;
+		cout << exception;
 		failed = true;
 	}
 	if(!overrideOutput)
@@ -68,33 +68,34 @@ bool compileSIMSourceCode(int argumentsCount, char ** arguments)
 // Handles an error message
 void handleError(errorType type, string extraMessage)
 {
-	string message;
+	ostringstream message;
+	message << CUSTOM_OUTPUT_START << UNDERLINE << SEPARATOR << BOLD << SEPARATOR << RED_TEXT_DEBUG_COLOR << CUSTOM_OUTPUT_CONTINUE;
 	switch(type)
 	{
 		case TOO_MUCH_ARGUMENTS_ERROR:
-			message = "Too much arguments, expected only one: [SIM file path : string]";
+			message << "Too much arguments, expected only one: [SIM file path : string]" << CUSTOM_OUTPUT_END;
 			break;
 		case MAKEFILE_NOT_USED_ERROR:
-			message = "SIMFECompiler must be generated through Makefile";
+			message << "SIMFECompiler must be generated through Makefile" << CUSTOM_OUTPUT_END;
 			break;
 		case RECOGNIZERS_MODEL_FILES_OPENING_ERROR:
-			message = "Could not open the recognizers model files";
+			message << "Could not open the recognizers model files" << CUSTOM_OUTPUT_END;
 			break;
 		case LEXICAL_ERROR:
-			message = ("Lexical error - " + extraMessage);
+			message << "Lexical error" << CUSTOM_OUTPUT_END << CUSTOM_OUTPUT_START << BOLD << SEPARATOR << RED_TEXT_DEBUG_COLOR << CUSTOM_OUTPUT_CONTINUE << " - " << extraMessage << CUSTOM_OUTPUT_END;
 			break;
 		case MISSING_SIM_EXTENSION_ERROR:
-			message = "SIM file must have .sim extension";
+			message << "SIM file must have .sim extension" << CUSTOM_OUTPUT_END;
 			break;
 		case INVALID_SIM_FILE_ERROR:
-			message = "Invalid SIM file provided";
+			message << "Invalid SIM file provided" << CUSTOM_OUTPUT_END;
 			break;
 		case UNKNOWN_ERROR:
 		default:
-			message = "Something happened and compilation had to stop";
+			message << "Something happened and compilation had to stop" << CUSTOM_OUTPUT_END;
 			break;
 	}
-	throw message;
+	throw message.str();
 }
 
 // Shows the help message
@@ -116,7 +117,7 @@ void showOutput(bool failed, string fileName)
 {
 	if(!failed)
 	{
-		cout << CUSTOM_OUTPUT_START << BOLD << SEPARATOR << UNDERLINE << SEPARATOR << GREEN_TEXT_DEBUG_COLOR << CUSTOM_OUTPUT_CONTINUE << "Successfully compiled" << ((fileName.length() > 0) ? (" " + fileName) : EMPTY_STRING) << CUSTOM_OUTPUT_END;
+		cout << CUSTOM_OUTPUT_START << BOLD << SEPARATOR << GREEN_TEXT_DEBUG_COLOR << CUSTOM_OUTPUT_CONTINUE << "Successfully compiled" << ((fileName.length() > 0) ? (" " + fileName) : EMPTY_STRING) << CUSTOM_OUTPUT_END;
 		cout << CUSTOM_OUTPUT_START << BOLD << SEPARATOR << GREEN_TEXT_DEBUG_COLOR << CUSTOM_OUTPUT_CONTINUE << " - No errors were found" << CUSTOM_OUTPUT_END << endl;
 	}
 	else
@@ -131,6 +132,8 @@ vector<token> lexicalAnalyzeSIMSourceCode(vector<lexeme> & lexemes, string fileN
 	bool validAnalysis = true;
 	lexeme unidentifiedLexeme;
 	vector<token> tokens;
+	map<string,int> identifiersNumbers;
+	int currentIdentifiersNumber = 1;
 	DFA * identifiersRecognizer = NULL, * keywordsRecognizer = NULL, * literalsRecognizer = NULL, * numbersRecognizer = NULL, * punctuationsRecognizer = NULL, * relationalLogicalOperatosRecognizer = NULL;
 	ifstream identifiersRecognizerModel, keywordsRecognizerModel, literalsRecognizerModel, numbersRecognizerModel, punctuationsRecognizerModel, relationalLogicalOperatosRecognizerModel;
 	DFAValidationResult resultKeywordsRecognizer, resultRelationalLogicalOperatorsRecognizer, resultPunctuationsRecognizer, resultNumbersRecognizer, resultLiteralsRecognizer, resultIdentifiersRecognizer;
@@ -348,7 +351,11 @@ vector<token> lexicalAnalyzeSIMSourceCode(vector<lexeme> & lexemes, string fileN
 		// Identifier found
 		else if(resultIdentifiersRecognizer.valid)
 		{
-			tokens.push_back(createToken(TT_IDENTIFIER,currentLineNumber,currentLexeme));
+			if(identifiersNumbers.find(currentLexeme) == identifiersNumbers.end())
+			{
+				identifiersNumbers[currentLexeme] = currentIdentifiersNumber++;
+			}
+			tokens.push_back(createToken(TT_IDENTIFIER,currentLineNumber,to_string(identifiersNumbers[currentLexeme])));
 		}
 
 		// Error found
@@ -379,8 +386,10 @@ vector<token> lexicalAnalyzeSIMSourceCode(vector<lexeme> & lexemes, string fileN
 			delete numbersRecognizer;
 			delete punctuationsRecognizer;
 			delete relationalLogicalOperatosRecognizer;
-			return tokens;
 	}
+
+	// Returns the recognized tokens
+	return tokens;
 }
 
 // Checks if an input is valid and if so, tells the input length
@@ -440,8 +449,8 @@ void rewindSIMFile(ifstream * SIMFile)
 
 // SIM source code functions
 
-// Gets the SIM source code from a SIM file (version 1)
-string getSIMSourceCodeV1(ifstream * SIMFile, bool trimSourceCode, bool closeAfterDone, bool deleteAfterDone)
+// Gets the SIM source code from a SIM file
+string getSIMSourceCode(ifstream * SIMFile, bool trimSourceCode, bool closeAfterDone, bool deleteAfterDone)
 {
 	ostringstream buffer;
 	string line;
@@ -459,55 +468,6 @@ string getSIMSourceCodeV1(ifstream * SIMFile, bool trimSourceCode, bool closeAft
 		delete SIMFile;
 	}
 	return ((trimSourceCode) ? trimUnneededCharactersFromSIMSourceCodeToString(buffer.str()) : buffer.str());
-}
-
-// Gets the SIM source code from a SIM file (version 2, faster and improved comments deletion)
-string getSIMSourceCodeV2(ifstream * SIMFile, bool trimSourceCode, bool closeAfterDone, bool deleteAfterDone)
-{
-	ostringstream buffer;
-	string line, SIMSourceCode;
-	rewindSIMFile(SIMFile);
-	bool copyCharacters = true, overrideFlag = false;
-	while(getline((*SIMFile),line))
-	{
-		if(line.length() > 0)
-		{
-			for(int letterIndex = 0; letterIndex < line.length(); letterIndex++)
-			{
-				if(line[letterIndex] == COMMENT_STARTED)
-				{
-					copyCharacters = false;
-				}
-				else if(line[letterIndex] == COMMENT_ENDED)
-				{
-					copyCharacters = true;
-					overrideFlag = true;
-				}
-				if(copyCharacters)
-				{
-					if(!overrideFlag)
-					{
-						buffer << line[letterIndex];
-					}
-					else
-					{
-						overrideFlag = false;
-					}
-				}
-			}
-			buffer << NEWLINE_CHARACTER;
-		}
-	}
-	SIMSourceCode = buffer.str();
-	if(trimSourceCode)
-	{
-		size_t emptySpaceIndex;
-		while((emptySpaceIndex = SIMSourceCode.find(WHITE_SPACE_CHARACTER,FIRST_CHARACTER)) != string::npos)
-		{
-		    SIMSourceCode.erase(emptySpaceIndex,SINGLE_CHARACTER_LENGTH);
-		}
-	}
-	return SIMSourceCode;
 }
 
 // Trims all comments from a SIM source code
@@ -578,6 +538,10 @@ void trimUnneededCharactersFromSIMSourceCode(string & SIMSourceCode)
 	{
 	    SIMSourceCode.erase(emptySpaceIndex,SINGLE_CHARACTER_LENGTH);
 	}
+	while((emptySpaceIndex = SIMSourceCode.find(EXTRA_NEWLINE_SEQUENCE,FIRST_CHARACTER)) != string::npos)
+	{
+	    SIMSourceCode.erase(emptySpaceIndex,SINGLE_CHARACTER_LENGTH);
+	}
 	trim(SIMSourceCode);
 }
 
@@ -591,6 +555,10 @@ string trimUnneededCharactersFromSIMSourceCodeToString(string SIMSourceCode)
 	    SIMSourceCode.erase(emptySpaceIndex,SINGLE_CHARACTER_LENGTH);
 	}
 	while((emptySpaceIndex = SIMSourceCode.find(TABULATION_CHARACTER,FIRST_CHARACTER)) != string::npos)
+	{
+	    SIMSourceCode.erase(emptySpaceIndex,SINGLE_CHARACTER_LENGTH);
+	}
+	while((emptySpaceIndex = SIMSourceCode.find(EXTRA_NEWLINE_SEQUENCE,FIRST_CHARACTER)) != string::npos)
 	{
 	    SIMSourceCode.erase(emptySpaceIndex,SINGLE_CHARACTER_LENGTH);
 	}
@@ -760,16 +728,14 @@ lexeme createLexeme(string contents, int lineNumber)
 // Resolves all the lexeme's extra properties in a list of lexemes
 void resolvePropertiesForLexemes(vector<lexeme> & lexemes, ifstream * SIMFile)
 {
-	int skipsCount = 0;
-	int lineCounter = 0;
-	int lexemeIndex = 0;
-	bool done = false, needsNewLine;
+	int lineCounter = 0, lexemeIndex = 0, lexemesSize = lexemes.size();
+	bool needsNewLine;
 	string line;
-	while(getline((*SIMFile),line) && (lexemeIndex < lexemes.size()))
+	while(getline((*SIMFile),line) && (lexemeIndex < lexemesSize))
 	{
 		needsNewLine = false;
 		lineCounter++;
-		while(!needsNewLine)
+		while(!needsNewLine && (lexemeIndex < lexemesSize))
 		{
 			int matchIndex = line.find(lexemes[lexemeIndex].contents);
 			if(matchIndex != string::npos)

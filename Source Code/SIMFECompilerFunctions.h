@@ -26,8 +26,7 @@ void rewindSIMFile(ifstream * SIMFile);
 
 // SIM source code functions
 
-string getSIMSourceCodeV1(ifstream * SIMFile, bool trimSourceCode = true, bool closeAfterDone = true, bool deleteAfterDone = true);
-string getSIMSourceCodeV2(ifstream * SIMFile, bool trimSourceCode = true, bool closeAfterDone = true, bool deleteAfterDone = true);
+string getSIMSourceCode(ifstream * SIMFile, bool trimSourceCode = true, bool closeAfterDone = true, bool deleteAfterDone = true);
 void trimCommentsFromSIMSourceCode(string & SIMSourceCode);
 string trimCommentsFromSIMSourceCodeToString(string SIMSourceCode);
 void trimUnneededCharactersFromSIMSourceCode(string & SIMSourceCode);

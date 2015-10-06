@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <vector>
+#include <map>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/operations.hpp>
