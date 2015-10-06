@@ -107,7 +107,7 @@ void showHelp()
 	cout << "\n\tNumber of required arguments: 1" << endl;
 	cout << "\n\tArguments" << endl;
 	cout << "\n\t\t1 - SIM file path" << endl;
-	cout << "\t\tIn case of no arguments, this help message will appear" << endl;
+	cout << "\n\t\tIn case of no arguments, this help message will appear" << endl;
 	cout << "\n\tOutput" << endl;
 	cout << "\n\t\tReturns an ouput message whether the file was successfully compiled or not" << endl;
 }
