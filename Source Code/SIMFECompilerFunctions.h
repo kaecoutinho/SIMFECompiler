@@ -1,7 +1,7 @@
 // SIMFECompilerFunctions.h
 // SIMFECompiler
 // Created by Kaê Angeli Coutinho and Ricardo Oliete Ogata
-// GNU GPL V2
+// MIT license
 
 // Included dependencies
 

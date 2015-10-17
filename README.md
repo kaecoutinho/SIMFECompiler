@@ -4,7 +4,7 @@
 
 Created by Kaê Angeli Coutinho and Ricardo Oliete Ogata
 
-_GNU GPL V2_
+_MIT license_
 
 ## Introduction
 
@@ -36,6 +36,14 @@ Check out [_SIM_'s _BNF_ description](https://github.com/kaiky25/SIMFECompiler/b
 For more helpful information, execute the _SIMFECompiler_ binary without any arguments.
 
 ## Changelog
+
+#### Version 1.1
+
+<ul>
+  <li>Syntactic analysis</li>
+  <li>Fixed bugs</li>
+  <li>Better workflow</li>
+</ul>
 
 #### Version 1.0
 
