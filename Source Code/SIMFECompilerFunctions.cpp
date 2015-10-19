@@ -32,7 +32,14 @@ bool compileSIMSourceCode(int argumentsCount, char ** arguments)
 			SIMSourceCode = getSIMSourceCode(SIMFile,true,false,false);
 			lexemes = getLexemesFromSIMSourceCode(SIMSourceCode,SIMFile);
 			tokens = lexicalAnalyzeSIMSourceCode(lexemes,SIMFileName);
-			failed = (tokens.size() == 0);
+			if(tokens.size() != 0)
+			{
+				// SINTATICAL ANALYSIS
+			}
+			else
+			{
+				failed = true;
+			}
 		}
 		else if(inputValidation < VALID_INPUT)
 		{
@@ -83,6 +90,9 @@ void handleError(errorType type, string extraMessage)
 			break;
 		case LEXICAL_ERROR:
 			message << "Lexical error" << CUSTOM_OUTPUT_END << CUSTOM_OUTPUT_START << BOLD << SEPARATOR << RED_TEXT_DEBUG_COLOR << CUSTOM_OUTPUT_CONTINUE << " - " << extraMessage << CUSTOM_OUTPUT_END;
+			break;
+		case SYNTATICAL_ERROR:
+			message << "Syntatical error" << CUSTOM_OUTPUT_END << CUSTOM_OUTPUT_START << BOLD << SEPARATOR << RED_TEXT_DEBUG_COLOR << CUSTOM_OUTPUT_CONTINUE << " - " << extraMessage << CUSTOM_OUTPUT_END;
 			break;
 		case MISSING_SIM_EXTENSION_ERROR:
 			message << "SIM file must have .sim extension" << CUSTOM_OUTPUT_END;
@@ -259,6 +269,8 @@ vector<token> lexicalAnalyzeSIMSourceCode(vector<lexeme> & lexemes, string fileN
 				case FS_IF:
 					type = TT_IF;
 					break;
+				case FS_NOT:
+					type = TT_NOT;
 				default:
 					validAnalysis = false;
 					unidentifiedLexeme.contents = currentLexeme;
@@ -871,6 +883,9 @@ string tokenTypeToString(tokenType type)
 			break;
 		case TT_FALSE:
 			typeString = "FALSE";
+			break;
+		case TT_NOT:
+			typeString = "NOT";
 			break;
 		case TT_RELATIONAL_LOGICAL_OPERATOR:
 			typeString = "RELATIONAL_LOGICAL_OPERATOR";

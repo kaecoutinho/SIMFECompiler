@@ -19,7 +19,7 @@
 
 // Compiler constants
 
-#define COMPILER_VERSION 1.0
+#define COMPILER_VERSION 1.1
 #define OUTPUT_PRECISION 1
 
 // Input treatment constants
@@ -114,6 +114,7 @@ typedef enum tokenType
 	TT_RETURN,
 	TT_TRUE,
 	TT_FALSE,
+	TT_NOT,
 	TT_RELATIONAL_LOGICAL_OPERATOR,
 	TT_ARITHMETIC_OPERATOR,
 	TT_ASSIGNMENT_OPERATOR,
@@ -143,7 +144,8 @@ typedef enum keywordsRecognizerFinalStates
 	FS_PROCEDURE = 76,
 	FS_TRUE = 85,
 	FS_FALSE = 88,
-	FS_RETURN = 95
+	FS_RETURN = 95,
+	FS_NOT = 98
 }keywordsRecognizerFinalStates;
 
 // Enumerated type that represents all of the relational logical operators recognizer's final states
@@ -186,6 +188,7 @@ typedef enum errorType
 	MAKEFILE_NOT_USED_ERROR,
 	RECOGNIZERS_MODEL_FILES_OPENING_ERROR,
 	LEXICAL_ERROR,
+	SYNTATICAL_ERROR,
 	MISSING_SIM_EXTENSION_ERROR,
 	INVALID_SIM_FILE_ERROR
 }errorType;

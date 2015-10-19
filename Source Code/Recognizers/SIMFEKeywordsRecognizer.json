@@ -8,17 +8,26 @@
         "final": false,
         "recognitionMessage": "recognition failed",
         "transitions": [{
-            "symbol": "f",
-            "destination": "q37"
+            "symbol": "v",
+            "destination": "q57"
         }, {
-            "symbol": "l",
-            "destination": "q48"
+            "symbol": "p",
+            "destination": "q60"
+        }, {
+            "symbol": "s",
+            "destination": "q52"
+        }, {
+            "symbol": "n",
+            "destination": "q96"
+        }, {
+            "symbol": "i",
+            "destination": "q26"
         }, {
             "symbol": "e",
             "destination": "q9"
         }, {
-            "symbol": "s",
-            "destination": "q52"
+            "symbol": "l",
+            "destination": "q48"
         }, {
             "symbol": "r",
             "destination": "q89"
@@ -26,14 +35,8 @@
             "symbol": "b",
             "destination": "q1"
         }, {
-            "symbol": "i",
-            "destination": "q26"
-        }, {
-            "symbol": "p",
-            "destination": "q60"
-        }, {
-            "symbol": "v",
-            "destination": "q57"
+            "symbol": "f",
+            "destination": "q37"
         }]
     }, {
         "name": "q1",
@@ -110,11 +113,11 @@
         "final": false,
         "recognitionMessage": "recognition failed",
         "transitions": [{
-            "symbol": "s",
-            "destination": "q20"
-        }, {
             "symbol": "n",
             "destination": "q10"
+        }, {
+            "symbol": "s",
+            "destination": "q20"
         }]
     }, {
         "name": "q10",
@@ -122,11 +125,11 @@
         "final": false,
         "recognitionMessage": "recognition failed",
         "transitions": [{
-            "symbol": "t",
-            "destination": "q17"
-        }, {
             "symbol": "q",
             "destination": "q11"
+        }, {
+            "symbol": "t",
+            "destination": "q17"
         }]
     }, {
         "name": "q11",
@@ -209,9 +212,6 @@
         "final": false,
         "recognitionMessage": "recognition failed",
         "transitions": [{
-            "symbol": "f",
-            "destination": "q96"
-        }, {
             "symbol": "n",
             "destination": "q27"
         }]
@@ -359,11 +359,11 @@
         "final": false,
         "recognitionMessage": "recognition failed",
         "transitions": [{
-            "symbol": "u",
-            "destination": "q38"
-        }, {
             "symbol": "a",
             "destination": "q43"
+        }, {
+            "symbol": "u",
+            "destination": "q38"
         }, {
             "symbol": "i",
             "destination": "q46"
@@ -498,7 +498,7 @@
         "name": "q53",
         "initial": false,
         "final": true,
-        "recognitionMessage": "recognition failed",
+        "recognitionMessage": "recognition succeed",
         "transitions": [{
             "symbol": "n",
             "destination": "q54"
@@ -533,11 +533,11 @@
         "final": false,
         "recognitionMessage": "recognition failed",
         "transitions": [{
-            "symbol": "a",
-            "destination": "q58"
-        }, {
             "symbol": "e",
             "destination": "q77"
+        }, {
+            "symbol": "a",
+            "destination": "q58"
         }]
     }, {
         "name": "q58",
@@ -578,11 +578,11 @@
         "final": false,
         "recognitionMessage": "recognition failed",
         "transitions": [{
-            "symbol": "g",
-            "destination": "q63"
-        }, {
             "symbol": "c",
             "destination": "q68"
+        }, {
+            "symbol": "g",
+            "destination": "q63"
         }]
     }, {
         "name": "q63",
@@ -868,6 +868,24 @@
         "transitions": []
     }, {
         "name": "q96",
+        "initial": false,
+        "final": false,
+        "recognitionMessage": "recognition failed",
+        "transitions": [{
+            "symbol": "a",
+            "destination": "q97"
+        }]
+    }, {
+        "name": "q97",
+        "initial": false,
+        "final": false,
+        "recognitionMessage": "recognition failed",
+        "transitions": [{
+            "symbol": "o",
+            "destination": "q98"
+        }]
+    }, {
+        "name": "q98",
         "initial": false,
         "final": true,
         "recognitionMessage": "recognition succeed",
