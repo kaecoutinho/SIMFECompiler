@@ -705,7 +705,8 @@ int doesLexemeNeedsSplit(char currentChar, char nextChar)
 bool isCharacterSingleSplittable(char character)
 {
 	return (character == '>' || character == '<' || character == '=' || character == '(' || character == ')' || 
-			character == '+' || character == '-' || character == ',' || character == ':' || character == ';');
+			character == '+' || character == '-' || character == ',' || character == ':' || character == ';' ||
+			character == '.');
 }
 
 // Checks if character is double splittable (another useful charactet can come after it)
