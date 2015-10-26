@@ -100,6 +100,8 @@ void handleError(errorType type, string extraMessage)
 		case BAD_GRAMMAR_FILE:
 			message << "Something is wrong with the LL(1) grammar file" << CUSTOM_OUTPUT_END;
 			break;
+		case SEMANTICAL_ERROR:
+			message << "Semantical error" << CUSTOM_OUTPUT_END << CUSTOM_OUTPUT_START << BOLD << SEPARATOR << RED_TEXT_DEBUG_COLOR << CUSTOM_OUTPUT_CONTINUE << " - " << extraMessage << CUSTOM_OUTPUT_END;
 		case MISSING_SIM_EXTENSION_ERROR:
 			message << "SIM file must have .sim extension" << CUSTOM_OUTPUT_END;
 			break;

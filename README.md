@@ -37,6 +37,14 @@ For more helpful information, execute the _SIMFECompiler_ binary without any arg
 
 ## Changelog
 
+#### Version 1.2
+
+<ul>
+  <li>Semantical analysis</li>
+  <li>Fixed bugs</li>
+  <li>Full front-end compiler</li>
+</ul>
+
 #### Version 1.1
 
 <ul>
