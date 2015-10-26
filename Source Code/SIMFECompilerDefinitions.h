@@ -19,7 +19,7 @@
 
 // Compiler constants
 
-#define COMPILER_VERSION 1.1
+#define COMPILER_VERSION 1.2
 #define OUTPUT_PRECISION 1
 
 // Input treatment constants
