@@ -1,33 +1,33 @@
 {
     "name": "SIMFERelationalLogicalOperatorsRecognizer",
     "description": "recognizes sim language's relational and logical operators",
-    "alphabet": "+-<=>eou",
+    "alphabet": "&+-<=>|",
     "states": [{
         "name": "q0",
         "initial": true,
         "final": false,
         "recognitionMessage": "recognition failed",
         "transitions": [{
-            "symbol": ">",
-            "destination": "q6"
-        }, {
             "symbol": "-",
             "destination": "q11"
         }, {
-            "symbol": "e",
-            "destination": "q1"
-        }, {
-            "symbol": "o",
+            "symbol": "|",
             "destination": "q8"
         }, {
-            "symbol": "+",
-            "destination": "q10"
+            "symbol": "<",
+            "destination": "q3"
         }, {
             "symbol": "=",
             "destination": "q2"
         }, {
-            "symbol": "<",
-            "destination": "q3"
+            "symbol": "+",
+            "destination": "q10"
+        }, {
+            "symbol": "&",
+            "destination": "q12"
+        }, {
+            "symbol": ">",
+            "destination": "q6"
         }]
     }, {
         "name": "q1",
@@ -47,11 +47,11 @@
         "final": true,
         "recognitionMessage": "recognition succeed",
         "transitions": [{
-            "symbol": "=",
-            "destination": "q5"
-        }, {
             "symbol": ">",
             "destination": "q4"
+        }, {
+            "symbol": "=",
+            "destination": "q5"
         }]
     }, {
         "name": "q4",
@@ -86,7 +86,7 @@
         "final": false,
         "recognitionMessage": "recognition failed",
         "transitions": [{
-            "symbol": "u",
+            "symbol": "|",
             "destination": "q9"
         }]
     }, {
@@ -107,5 +107,14 @@
         "final": true,
         "recognitionMessage": "recognition succeed",
         "transitions": []
+    }, {
+        "name": "q12",
+        "initial": false,
+        "final": false,
+        "recognitionMessage": "recognition failed",
+        "transitions": [{
+            "symbol": "&",
+            "destination": "q1"
+        }]
     }]
 }

@@ -69,14 +69,17 @@
 
 // Grammar constants
 
-#define SA_AND "e"
+#define LL1_GRAMMAR_PARTIAL_PATH "/Grammar/SIMLL1Grammar.json"
+#define LL1_GRAMMAR_DELIMITER "$"
+#define LL1_GRAMMAR_EPSILON "EPSILON"
+#define SA_AND "&&"
 #define SA_EQUAL "="
 #define SA_LESS_THAN "<"
 #define SA_UNEQUAL "<>"
 #define SA_LESS_EQUAL "<="
 #define SA_GREATER_THAN ">"
 #define SA_GREATER_EQUAL ">="
-#define SA_OR "ou"
+#define SA_OR "||"
 #define SA_PLUS "+"
 #define SA_MINUS "-"
 #define SA_SEMICOLON ";"
@@ -189,6 +192,8 @@ typedef enum errorType
 	RECOGNIZERS_MODEL_FILES_OPENING_ERROR,
 	LEXICAL_ERROR,
 	SYNTATICAL_ERROR,
+	GRAMMAR_FILE_OPENING_ERROR,
+	BAD_GRAMMAR_FILE,
 	MISSING_SIM_EXTENSION_ERROR,
 	INVALID_SIM_FILE_ERROR
 }errorType;
@@ -209,3 +214,15 @@ struct token
 	int lineNumber;
 	string attribute;
 };
+
+// Represents a pseudo token containing its attribute, corresponding line number and original attribute (from token)
+typedef struct pseudoToken pseudoToken;
+struct pseudoToken
+{
+	string attribute;
+	int lineNumber;
+	string original;
+};
+
+// Represents an inner map inside a map structure
+typedef map<string,string> innerMap;

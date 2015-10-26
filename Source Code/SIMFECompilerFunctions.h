@@ -16,6 +16,7 @@ void handleError(errorType type, string extraMessage = EMPTY_STRING);
 void showHelp();
 void showOutput(bool failed, string fileName);
 vector<token> lexicalAnalyzeSIMSourceCode(vector<lexeme> & lexemes, string fileName);
+bool syntaticalAnalyzeSIMSourceCode(vector<token> & tokens, string fileName);
 int isInputValid(int argumentsCount);
 
 // SIM file functions
@@ -52,6 +53,18 @@ string tokensToString(vector<token> tokens, bool prettyPrint = true);
 string tokenTypeToString(tokenType type);
 int findFixedAttibuteNumberForToken(tokenType type, string attributeName);
 string findFixedAttibuteNameForToken(tokenType type, int attributeNumber);
+
+// Pseudo token functions
+
+pseudoToken createPseudoToken(string attribute = EMPTY_STRING, int lineNumber = -1, string original = EMPTY_STRING);
+
+// Grammar and syntatical analysis functions
+
+map<string,innerMap> getll1GrammarMapFromGrammarFile(ifstream & ll1GrammarFile);
+queue<pseudoToken> getInputQueueFromTokens(vector<token> & tokens);
+stack<string> getSymbolsStack();
+bool isSymbolNonterminal(string symbol);
+vector<string> getSymbolsFromRule(string rule);
 
 // Debug functions
 

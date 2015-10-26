@@ -12,7 +12,7 @@ _MIT license_
 
 The front-end compiler is mostly written in _C++_ and uses [_Boost_](http://www.boost.org) and [_DFA_](https://github.com/kaiky25/DFA) libraries as main dependencies.
 
-Check out [_SIM_'s _BNF_ description](https://github.com/kaiky25/SIMFECompiler/blob/master/SIM%20Language%20BNF.pdf) to better understand its compiler.
+Check out [_SIM_'s grammar](https://github.com/kaiky25/SIMFECompiler/blob/master/SIMGrammar.md) to better understand its compiler.
 
 ## Usage
 
@@ -43,6 +43,7 @@ For more helpful information, execute the _SIMFECompiler_ binary without any arg
   <li>Syntactic analysis</li>
   <li>Fixed bugs</li>
   <li>Better workflow</li>
+  <li>Updated grammar file</li>
 </ul>
 
 #### Version 1.0

@@ -34,7 +34,7 @@ bool compileSIMSourceCode(int argumentsCount, char ** arguments)
 			tokens = lexicalAnalyzeSIMSourceCode(lexemes,SIMFileName);
 			if(tokens.size() != 0)
 			{
-				// SINTATICAL ANALYSIS
+				failed = !syntaticalAnalyzeSIMSourceCode(tokens,SIMFileName);
 			}
 			else
 			{
@@ -93,6 +93,12 @@ void handleError(errorType type, string extraMessage)
 			break;
 		case SYNTATICAL_ERROR:
 			message << "Syntatical error" << CUSTOM_OUTPUT_END << CUSTOM_OUTPUT_START << BOLD << SEPARATOR << RED_TEXT_DEBUG_COLOR << CUSTOM_OUTPUT_CONTINUE << " - " << extraMessage << CUSTOM_OUTPUT_END;
+			break;
+		case GRAMMAR_FILE_OPENING_ERROR:
+			message << "Could not open the LL(1) grammar file" << CUSTOM_OUTPUT_END;
+			break;
+		case BAD_GRAMMAR_FILE:
+			message << "Something is wrong with the LL(1) grammar file" << CUSTOM_OUTPUT_END;
 			break;
 		case MISSING_SIM_EXTENSION_ERROR:
 			message << "SIM file must have .sim extension" << CUSTOM_OUTPUT_END;
@@ -277,7 +283,7 @@ vector<token> lexicalAnalyzeSIMSourceCode(vector<lexeme> & lexemes, string fileN
 					unidentifiedLexeme.lineNumber = currentLineNumber;
 					break;
 			}
-			tokens.push_back(createToken(type,currentLineNumber));
+			tokens.push_back(createToken(type,currentLineNumber,currentLexeme));
 		}
 
 		// Relational logical operator found
@@ -381,7 +387,7 @@ vector<token> lexicalAnalyzeSIMSourceCode(vector<lexeme> & lexemes, string fileN
 		}
 	}
 
-	// Report lexical error if happened
+	// Reports lexical error if happened
 	if(!validAnalysis)
 	{
 		handleError(LEXICAL_ERROR,(fileName + ":" + to_string(unidentifiedLexeme.lineNumber) + ": unidentified lexeme called '" + unidentifiedLexeme.contents + "'"));
@@ -402,6 +408,114 @@ vector<token> lexicalAnalyzeSIMSourceCode(vector<lexeme> & lexemes, string fileN
 
 	// Returns the recognized tokens
 	return tokens;
+}
+
+// Does the syntax analysis (using LL(1) top-down approach) on a SIM source code
+bool syntaticalAnalyzeSIMSourceCode(vector<token> & tokens, string fileName)
+{
+	bool validAnalysis = true, stopAnalysis = false, overrideFlag = false;
+	ifstream ll1GrammarFile;
+	map<string,innerMap> ll1GrammarMap;
+	queue<pseudoToken> inputQueue;
+	stack<string> symbolsStack;
+	string currentSymbol, currentInput;
+	pseudoToken mistakenPseudoToken;
+
+	// Opens the SIM's LL(1) grammar file
+	ll1GrammarFile.open(string(PROJECT_DIRECTORY_PATH).append(string(LL1_GRAMMAR_PARTIAL_PATH)),ios::in);
+
+	// Checks if file was properly opened
+	if(ll1GrammarFile.bad())
+	{
+		handleError(GRAMMAR_FILE_OPENING_ERROR);
+		stopAnalysis = true;
+		validAnalysis = false;
+		overrideFlag = true;
+	}
+
+	// Gets the full grammar map
+	ll1GrammarMap = getll1GrammarMapFromGrammarFile(ll1GrammarFile);
+
+	// Checks if LL(1) grammar file was properly read
+	if(ll1GrammarMap.empty())
+	{
+		handleError(BAD_GRAMMAR_FILE);
+		stopAnalysis = true;
+		validAnalysis = false;
+		overrideFlag = true;
+	}
+
+	// Gets the input queue
+	inputQueue = getInputQueueFromTokens(tokens);
+
+	// Gets the symbols stack
+	symbolsStack = getSymbolsStack();
+
+	// Analyses the tokens stream
+	while(!stopAnalysis && !symbolsStack.empty() && !inputQueue.empty())
+	{
+		// Get the current symbol (X) and input (t) for the current analysis step
+		currentSymbol = symbolsStack.top();
+		currentInput = inputQueue.front().attribute;
+
+		// Checks if X = $ and t = $, making the analysis right and done
+		if(currentSymbol.compare(LL1_GRAMMAR_DELIMITER) == EQUAL_STRINGS && currentInput.compare(LL1_GRAMMAR_DELIMITER) == EQUAL_STRINGS)
+		{
+			stopAnalysis = true;
+		}
+
+		// Checks if X = t and t != $, making a match and proceding with the symbol stack and input queue
+		else if(currentSymbol.compare(currentInput) == EQUAL_STRINGS && currentInput.compare(LL1_GRAMMAR_DELIMITER) != EQUAL_STRINGS)
+		{
+			symbolsStack.pop();
+			inputQueue.pop();
+		}
+
+		// Checks if X is a nonterminal symbol
+		else if(isSymbolNonterminal(currentSymbol))
+		{
+
+			// Checks if there's a rule for X and t (M(X,t))
+			if(ll1GrammarMap[currentSymbol].find(currentInput) != ll1GrammarMap[currentSymbol].end())
+			{
+				symbolsStack.pop();
+				vector<string> ruleSymbols = getSymbolsFromRule(ll1GrammarMap[currentSymbol][currentInput]);
+				for(int symbolIndex = 0; symbolIndex < ruleSymbols.size(); symbolIndex++)
+				{
+					string symbolToPush = ruleSymbols[symbolIndex];
+					if(symbolToPush.compare(LL1_GRAMMAR_EPSILON) != EQUAL_STRINGS)
+					{
+						symbolsStack.push(ruleSymbols[symbolIndex]);
+					}
+				}
+			}
+
+			// Error found
+			else
+			{
+				mistakenPseudoToken = inputQueue.front();
+				stopAnalysis = true;
+				validAnalysis = false;
+			}
+		}
+
+		// Error found
+		else
+		{
+			mistakenPseudoToken = inputQueue.front();
+			stopAnalysis = true;
+			validAnalysis = false;
+		}
+	}
+
+	// Reports syntatical error if happened
+	if(!validAnalysis && !overrideFlag)
+	{
+		handleError(SYNTATICAL_ERROR,(fileName + ":" + to_string(mistakenPseudoToken.lineNumber) + ": there is something wrong near to lexeme called '" + mistakenPseudoToken.original + "'"));
+	}
+
+	// Returns whether the analysis was successful or not
+	return validAnalysis;
 }
 
 // Checks if an input is valid and if so, tells the input length
@@ -1114,6 +1228,208 @@ string findFixedAttibuteNameForToken(tokenType type, int attributeNumber)
 			break;
 	}
 	return attributeName;
+}
+
+// Pseudo token functions
+
+pseudoToken createPseudoToken(string attribute, int lineNumber, string original)
+{
+	pseudoToken newPseudoToken;
+	newPseudoToken.attribute = attribute;
+	newPseudoToken.lineNumber = lineNumber;
+	newPseudoToken.original = original;
+	return newPseudoToken;
+}
+
+// Grammar functions and syntatical analysis functions
+
+// Gets the full grammar LL(1) grammar map from a JSON file
+map<string,innerMap> getll1GrammarMapFromGrammarFile(ifstream & ll1GrammarFile)
+{
+	bool validDocument = true;
+	stringstream buffer;
+	vector<string> ll1GrammarJSONKeys;
+	map<string,innerMap> ll1GrammarMap;
+	Document ll1GrammarJSONDocument;
+	buffer << ll1GrammarFile.rdbuf();
+	ll1GrammarJSONDocument.Parse<0>(buffer.str().c_str());
+	if(ll1GrammarJSONDocument.IsObject())
+	{
+		for(Value::ConstMemberIterator iterator = ll1GrammarJSONDocument.MemberBegin(); iterator != ll1GrammarJSONDocument.MemberEnd(); iterator++)
+		{
+			ll1GrammarJSONKeys.push_back(iterator->name.GetString());
+		}
+		for(int keyIndex = 0; keyIndex < ll1GrammarJSONKeys.size(); keyIndex++)
+		{
+			const char * key = ll1GrammarJSONKeys[keyIndex].c_str();
+			if(!ll1GrammarJSONDocument.HasMember(key))
+			{
+				validDocument = false;
+			}
+			else
+			{
+				if(!ll1GrammarJSONDocument[key].IsObject())
+				{
+					validDocument = false;
+				}
+			}
+		}
+		if(validDocument)
+		{
+			for(int keyIndex = 0; keyIndex < ll1GrammarJSONKeys.size(); keyIndex++)
+			{
+				const char * key = ll1GrammarJSONKeys[keyIndex].c_str();
+				vector<string> temporaryJSONKeys;
+				for(Value::ConstMemberIterator iterator = ll1GrammarJSONDocument[key].MemberBegin(); iterator != ll1GrammarJSONDocument[key].MemberEnd(); iterator++)
+				{
+					temporaryJSONKeys.push_back(iterator->name.GetString());
+				}
+				for(int innerKeyIndex = 0; innerKeyIndex < temporaryJSONKeys.size(); innerKeyIndex++)
+				{
+					const char * innerKey = temporaryJSONKeys[innerKeyIndex].c_str();
+					if(ll1GrammarJSONDocument[key][innerKey].IsString())
+					{
+						ll1GrammarMap[ll1GrammarJSONKeys[keyIndex]][temporaryJSONKeys[innerKeyIndex]] = ll1GrammarJSONDocument[key][innerKey].GetString();
+					}
+					else
+					{
+						validDocument = false;
+					}
+				}
+				temporaryJSONKeys.clear();
+			}
+		}
+	}
+	if(!validDocument)
+	{
+		ll1GrammarMap.clear();
+	}
+	return ll1GrammarMap;
+}
+
+// Gets the input queue from a list of tokens
+queue<pseudoToken> getInputQueueFromTokens(vector<token> & tokens)
+{
+	bool overrideFlag = false;
+	string element;
+	queue<pseudoToken> inputQueue;
+	for(int tokenIndex = 0; tokenIndex < tokens.size(); tokenIndex++)
+	{
+		token currentToken = tokens[tokenIndex];
+		element = currentToken.attribute;
+		if(currentToken.type == TT_IDENTIFIER)
+		{
+			overrideFlag = true;
+			inputQueue.push(createPseudoToken("i",currentToken.lineNumber,currentToken.attribute));
+			for(int letterIndex = 0; letterIndex < currentToken.attribute.length(); letterIndex++)
+			{
+				string aux;
+				aux.push_back(currentToken.attribute[letterIndex]);
+				inputQueue.push(createPseudoToken(aux,currentToken.lineNumber,currentToken.attribute));
+			}
+		}
+		else if(currentToken.type == TT_LITERAL)
+		{
+			overrideFlag = true;
+			inputQueue.push(createPseudoToken("l",currentToken.lineNumber,currentToken.attribute));
+			inputQueue.push(createPseudoToken("i",currentToken.lineNumber,currentToken.attribute));
+			inputQueue.push(createPseudoToken("t",currentToken.lineNumber,currentToken.attribute));
+			inputQueue.push(createPseudoToken("e",currentToken.lineNumber,currentToken.attribute));
+			inputQueue.push(createPseudoToken("r",currentToken.lineNumber,currentToken.attribute));
+			inputQueue.push(createPseudoToken("a",currentToken.lineNumber,currentToken.attribute));
+			inputQueue.push(createPseudoToken("l",currentToken.lineNumber,currentToken.attribute));
+		}
+		if(!overrideFlag)
+		{
+			inputQueue.push(createPseudoToken(element,currentToken.lineNumber,currentToken.attribute));
+		}
+		else
+		{
+			overrideFlag = false;
+		}
+	}
+	inputQueue.push(createPseudoToken(LL1_GRAMMAR_DELIMITER));
+	return inputQueue;
+}
+
+// Gets an empty and read symbols stack
+stack<string> getSymbolsStack()
+{
+	stack<string> symbolsStack;
+	symbolsStack.push(LL1_GRAMMAR_DELIMITER);
+	symbolsStack.push("PROGRAM");
+	return symbolsStack;
+}
+
+// Check if a given symbol is nonterminal
+bool isSymbolNonterminal(string symbol)
+{
+	return symbol.compare(LL1_GRAMMAR_DELIMITER) == EQUAL_STRINGS
+			|| symbol.compare("PROGRAM") == EQUAL_STRINGS 
+			|| symbol.compare("BLOCK") == EQUAL_STRINGS
+			|| symbol.compare("BLOCK_EXTENSION") == EQUAL_STRINGS
+			|| symbol.compare("BLOCK_SECOND_EXTENSION") == EQUAL_STRINGS
+			|| symbol.compare("VARIABLES_DECLARATION_STAGE") == EQUAL_STRINGS
+			|| symbol.compare("VARIABLES_DECLARATION_STAGE_AUX") == EQUAL_STRINGS
+			|| symbol.compare("VARIABLES_DECLARATION_STAGE_AUX_EXTENSION") == EQUAL_STRINGS
+			|| symbol.compare("VARIABLES_DECLARATION") == EQUAL_STRINGS
+			|| symbol.compare("VARIABLES_DECLARATION_EXTENSION") == EQUAL_STRINGS
+			|| symbol.compare("TYPE") == EQUAL_STRINGS
+			|| symbol.compare("SUB-ROUTINES_DECLARATION_STAGE") == EQUAL_STRINGS
+			|| symbol.compare("SUB-ROUTINES_DECLARATION_STAGE_EXTENSION") == EQUAL_STRINGS
+			|| symbol.compare("PROCEDURE_DECLARATION") == EQUAL_STRINGS
+			|| symbol.compare("FUNCTION_DECLARATION") == EQUAL_STRINGS
+			|| symbol.compare("COMMANDS") == EQUAL_STRINGS
+			|| symbol.compare("COMMANDS_AUX") == EQUAL_STRINGS
+			|| symbol.compare("COMMANDS_AUX_EXTENSION") == EQUAL_STRINGS
+			|| symbol.compare("COMMANDS_AUX_SECOND_EXTENSION") == EQUAL_STRINGS
+			|| symbol.compare("COMMAND") == EQUAL_STRINGS
+			|| symbol.compare("PROCEDURE_CALL_OR_ATTRIBUTION_COMMAND") == EQUAL_STRINGS
+			|| symbol.compare("ATTRIBUTION_COMMAND") == EQUAL_STRINGS
+			|| symbol.compare("ATTRIBUTION_TYPE") == EQUAL_STRINGS
+			|| symbol.compare("CONDITIONAL_COMMAND_IF") == EQUAL_STRINGS
+			|| symbol.compare("CONDITIONAL_COMMAND_ELSE") == EQUAL_STRINGS
+			|| symbol.compare("WHILE_COMMAND") == EQUAL_STRINGS
+			|| symbol.compare("READ_COMMAND") == EQUAL_STRINGS
+			|| symbol.compare("WRITE_COMMAND") == EQUAL_STRINGS
+			|| symbol.compare("WRITE_COMMAND_EXTENSION") == EQUAL_STRINGS
+			|| symbol.compare("EXPRESSION") == EQUAL_STRINGS
+			|| symbol.compare("EXPRESSION_EXTENSION") == EQUAL_STRINGS
+			|| symbol.compare("RELATIONAL_LOGICAL_OPERATOR") == EQUAL_STRINGS
+			|| symbol.compare("SIMPLE_EXPRESSION") == EQUAL_STRINGS
+			|| symbol.compare("FACTOR") == EQUAL_STRINGS
+			|| symbol.compare("VARIABLE") == EQUAL_STRINGS
+			|| symbol.compare("FUNCTION_RETURN") == EQUAL_STRINGS
+			|| symbol.compare("FUNCTION_RETURN_EXTENSION") == EQUAL_STRINGS
+			|| symbol.compare("IDENTIFIER") == EQUAL_STRINGS
+			|| symbol.compare("IDENTIFIER_EXTENSION") == EQUAL_STRINGS
+			|| symbol.compare("IDENTIFIER_SECOND_EXTENSION") == EQUAL_STRINGS
+			|| symbol.compare("NUMBER") == EQUAL_STRINGS
+			|| symbol.compare("NUMBER_EXTENSION") == EQUAL_STRINGS
+			|| symbol.compare("DIGIT") == EQUAL_STRINGS
+			|| symbol.compare("LETTER") == EQUAL_STRINGS;
+}
+
+// Extracts all symbols from a given rule
+vector<string> getSymbolsFromRule(string rule)
+{
+	string buffer;
+	vector<string> symbols;
+	for(int letterIndex = 0; letterIndex < rule.length(); letterIndex++)
+	{
+		if(rule[letterIndex] != WHITE_SPACE_CHARACTER)
+		{
+			buffer += rule[letterIndex];
+		}
+		else
+		{
+			symbols.push_back(buffer);
+			buffer.clear();
+		}
+	}
+	symbols.push_back(buffer);
+	reverse(symbols.begin(),symbols.end());
+	return symbols;
 }
 
 // Debug functions

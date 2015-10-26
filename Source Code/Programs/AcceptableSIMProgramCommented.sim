@@ -1,7 +1,7 @@
 { PROGRAMA EX1 }
 
 programa ex1;
-	var 
+	var
 		var1, var2 : inteiro;
 		var3, var4 : booleano;
 
@@ -11,12 +11,12 @@ programa ex1;
 		var
 			var5 : inteiro;
 		inicio
-			leia(var5)
+			leia(var5);
 			se(var5 > 0)
 			entao
-				escreva(var5)
+				escreva(var5);
 			senao
-				escreva("numero negativo")
+				escreva("numero negativo");
 		fim;
 
 	{ FUNCAO FUNC }
@@ -26,12 +26,12 @@ programa ex1;
 			var6 : booleano;
 		inicio
 			escreva("quer continuar:");
-			leia(var6)
-			se(var6 e verdadeiro)
+			leia(var6);
+			se(var6 && verdadeiro)
 			entao
-				retorne 1
+				retorne 1;
 			senao
-				retorne 0
+				retorne 0;
 		fim;
 
 	{ FLUXO PRINCIPAL }
@@ -40,7 +40,7 @@ programa ex1;
 		leia(var2);
 		enquanto(var2 <> 0)
 		faca
-			leia(var2)
+			leia(var2);
 		escreva(var2);
 		var1 :+ func;
 		proc;
@@ -48,8 +48,8 @@ programa ex1;
 		leia(var4);
 		se(var3 = verdadeiro)
 		entao
-			escreva(var3)
-		se(var3 ou var4)
+			escreva(var3);
+		se(var3 || var4)
 		entao
-			escreva("aprovado em pelo menos um criterio")
+			escreva("aprovado em pelo menos um criterio");
 	fim.
