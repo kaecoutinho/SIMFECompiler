@@ -12,7 +12,7 @@ _MIT license_
 
 The front-end compiler is mostly written in _C++_ and uses [_Boost_](http://www.boost.org) and [_DFA_](https://github.com/kaiky25/DFA) libraries as main dependencies.
 
-Check out [_SIM_'s grammar](https://github.com/kaiky25/SIMFECompiler/blob/master/SIMGrammar.md) to better understand its compiler.
+Check out [_SIM_'s grammar](https://github.com/kaiky25/SIMFECompiler/blob/master/Documents/SIMGrammar.md) to better understand its compiler.
 
 ## Usage
 
