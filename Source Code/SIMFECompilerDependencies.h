@@ -20,6 +20,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
+#include <boost/format.hpp>
 #include "DFA/DFA.h"
 
 // Used namespaces
@@ -27,3 +28,4 @@
 using namespace std;
 using namespace boost::algorithm;
 using namespace boost::filesystem;
+using boost::format;

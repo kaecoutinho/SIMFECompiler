@@ -31,10 +31,14 @@ bool compileSIMSourceCode(int argumentsCount, char ** arguments)
 			SIMFile = readSIMFile(SIMFilePath);
 			SIMSourceCode = getSIMSourceCode(SIMFile,true,false,false);
 			lexemes = getLexemesFromSIMSourceCode(SIMSourceCode,SIMFile);
-			tokens = lexicalAnalyzeSIMSourceCode(lexemes,SIMFileName);
-			if(tokens.size() != 0)
+			failed = !lexicalAnalyzeSIMSourceCode(lexemes,tokens,SIMFileName);
+			if(!failed)
 			{
 				failed = !syntaticalAnalyzeSIMSourceCode(tokens,SIMFileName);
+				if(!failed)
+				{
+					failed = !semanticalAnalyzeSIMSourceCode(tokens,SIMFileName);
+				}
 			}
 			else
 			{
@@ -102,6 +106,7 @@ void handleError(errorType type, string extraMessage)
 			break;
 		case SEMANTICAL_ERROR:
 			message << "Semantical error" << CUSTOM_OUTPUT_END << CUSTOM_OUTPUT_START << BOLD << SEPARATOR << RED_TEXT_DEBUG_COLOR << CUSTOM_OUTPUT_CONTINUE << " - " << extraMessage << CUSTOM_OUTPUT_END;
+			break;
 		case MISSING_SIM_EXTENSION_ERROR:
 			message << "SIM file must have .sim extension" << CUSTOM_OUTPUT_END;
 			break;
@@ -145,13 +150,12 @@ void showOutput(bool failed, string fileName)
 }
 
 // Does the lexical analysis on a SIM source code 
-vector<token> lexicalAnalyzeSIMSourceCode(vector<lexeme> & lexemes, string fileName)
+bool lexicalAnalyzeSIMSourceCode(vector<lexeme> & lexemes, vector<token> & tokens, string fileName)
 {
 	bool validAnalysis = true;
 	lexeme unidentifiedLexeme;
-	vector<token> tokens;
 	map<string,int> identifiersNumbers;
-	int currentIdentifiersNumber = 1;
+	int currentIdentifiersNumber = 0;
 	DFA * identifiersRecognizer = NULL, * keywordsRecognizer = NULL, * literalsRecognizer = NULL, * numbersRecognizer = NULL, * punctuationsRecognizer = NULL, * relationalLogicalOperatosRecognizer = NULL;
 	ifstream identifiersRecognizerModel, keywordsRecognizerModel, literalsRecognizerModel, numbersRecognizerModel, punctuationsRecognizerModel, relationalLogicalOperatosRecognizerModel;
 	DFAValidationResult resultKeywordsRecognizer, resultRelationalLogicalOperatorsRecognizer, resultPunctuationsRecognizer, resultNumbersRecognizer, resultLiteralsRecognizer, resultIdentifiersRecognizer;
@@ -279,6 +283,12 @@ vector<token> lexicalAnalyzeSIMSourceCode(vector<lexeme> & lexemes, string fileN
 					break;
 				case FS_NOT:
 					type = TT_NOT;
+				case FS_END_IF:
+					type = TT_END_IF;
+					break;
+				case FS_END_WHILE:
+					type = TT_END_WHILE;
+					break;
 				default:
 					validAnalysis = false;
 					unidentifiedLexeme.contents = currentLexeme;
@@ -375,7 +385,7 @@ vector<token> lexicalAnalyzeSIMSourceCode(vector<lexeme> & lexemes, string fileN
 			{
 				identifiersNumbers[currentLexeme] = currentIdentifiersNumber++;
 			}
-			tokens.push_back(createToken(TT_IDENTIFIER,currentLineNumber,to_string(identifiersNumbers[currentLexeme])));
+			tokens.push_back(createToken(TT_IDENTIFIER,currentLineNumber,currentLexeme,to_string(identifiersNumbers[currentLexeme])));
 		}
 
 		// Error found
@@ -408,8 +418,8 @@ vector<token> lexicalAnalyzeSIMSourceCode(vector<lexeme> & lexemes, string fileN
 			delete relationalLogicalOperatosRecognizer;
 	}
 
-	// Returns the recognized tokens
-	return tokens;
+	// Returns whether the analysis was successful or not
+	return validAnalysis;
 }
 
 // Does the syntax analysis (using LL(1) top-down approach) on a SIM source code
@@ -476,7 +486,6 @@ bool syntaticalAnalyzeSIMSourceCode(vector<token> & tokens, string fileName)
 		// Checks if X is a nonterminal symbol
 		else if(isSymbolNonterminal(currentSymbol))
 		{
-
 			// Checks if there's a rule for X and t (M(X,t))
 			if(ll1GrammarMap[currentSymbol].find(currentInput) != ll1GrammarMap[currentSymbol].end())
 			{
@@ -513,7 +522,155 @@ bool syntaticalAnalyzeSIMSourceCode(vector<token> & tokens, string fileName)
 	// Reports syntatical error if happened
 	if(!validAnalysis && !overrideFlag)
 	{
-		handleError(SYNTATICAL_ERROR,(fileName + ":" + to_string(mistakenPseudoToken.lineNumber) + ": there is something wrong near to lexeme called '" + mistakenPseudoToken.original + "'"));
+		handleError(SYNTATICAL_ERROR,(fileName + ":" + to_string(mistakenPseudoToken.lineNumber) + ": invalid syntax structure"));
+	}
+
+	// Returns whether the analysis was successful or not
+	return validAnalysis;
+}
+
+// Does the semantic analysis on a SIM source code
+bool semanticalAnalyzeSIMSourceCode(vector<token> & tokens, string fileName)
+{
+	bool validAnalysis = true;
+	int errorLineNumber;
+	vector<symbol> symbolTable;
+	vector<innerStack> typeCheckList;
+	string errorMessage;
+
+	// Gets the symbol table
+	symbolTable = getSymbolTableFromTokens(tokens);
+
+	// Checks if a unidentified identifier (not declared) was used
+	for(int tokenIndex = 0; tokenIndex < tokens.size(); tokenIndex++)
+	{
+		if(validAnalysis)
+		{
+			token currentToken = tokens[tokenIndex];
+			if(currentToken.type == TT_IDENTIFIER)
+			{
+				// Unidentified identifier found
+				if(!doesSymbolExist(symbolTable,stoi(currentToken.extra)))
+				{
+					validAnalysis = false;
+					errorLineNumber = currentToken.lineNumber;
+					errorMessage = "unidentified identifier called '" + currentToken.attribute + "'";
+				}
+			}
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	// Checks if a semantical error already happened
+	if(validAnalysis)
+	{
+		// Gets the list of types to check
+		typeCheckList = getTypeCheckListFromTokens(tokens);
+
+		// Checks all expressions eligible for type check
+		for(int typeCheckIndex = 0; typeCheckIndex < typeCheckList.size(); typeCheckIndex++)
+		{
+			bool firstExpression = true;
+			stack<innerVector> currentTypeCheckStack = typeCheckList[typeCheckIndex];
+			symbolType currentType, previousType, currentTokenType, previousTokenType;
+			token currentToken, previousToken;
+			while(!currentTypeCheckStack.empty() && validAnalysis)
+			{
+				vector<token> currentExpressionList = currentTypeCheckStack.top();
+
+				// Checks if current expression has relational operators
+				if(currentExpressionList.size() > 1)
+				{
+					for(int expressionIndex = 0; expressionIndex < currentExpressionList.size(); expressionIndex++)
+					{
+						currentToken = currentExpressionList[expressionIndex];
+						switch(currentToken.type)
+						{
+							case TT_IDENTIFIER:
+								currentTokenType = getSymbolFromSymbolTable(symbolTable,stoi(currentToken.extra)).type;
+								break;
+							case TT_NUMBER:
+							case TT_ASSIGNMENT_OPERATOR:
+								currentTokenType = ST_INTEGER;
+								break;
+							case TT_TRUE:
+							case TT_FALSE:
+							case TT_NOT:
+								currentTokenType = ST_BOOLEAN;
+								break;
+						}
+						if(expressionIndex == 0)
+						{
+							previousTokenType = currentTokenType;
+						}
+
+						// Unequal types found
+						if(previousTokenType != currentTokenType)
+						{
+							validAnalysis = false;
+							errorLineNumber = currentToken.lineNumber;
+							errorMessage = "types are not equal";
+							break;
+						}
+						previousTokenType = currentTokenType;
+					}
+					currentType = ST_BOOLEAN;
+					if(firstExpression)
+					{
+						firstExpression = false;
+						previousType = currentType;
+					}
+				}
+
+				// Single expression found
+				else
+				{
+					currentToken = currentExpressionList[0];
+					switch(currentToken.type)
+					{
+						case TT_IDENTIFIER:
+							currentTokenType = getSymbolFromSymbolTable(symbolTable,stoi(currentToken.extra)).type;
+							break;
+						case TT_NUMBER:
+						case TT_ASSIGNMENT_OPERATOR:
+							currentTokenType = ST_INTEGER;
+							break;
+						case TT_TRUE:
+						case TT_FALSE:
+						case TT_NOT:
+							currentTokenType = ST_BOOLEAN;
+							break;
+					}
+					currentType = currentTokenType;
+					if(firstExpression)
+					{
+						firstExpression = false;
+						previousType = currentType;
+						previousToken = currentToken;
+					}
+				}
+
+				// Unequal types found
+				if(currentType != previousType)
+				{
+					validAnalysis = false;
+					errorLineNumber = previousToken.lineNumber;
+					errorMessage = "types are not equal";
+				}
+				previousType = currentType;
+				previousToken = currentToken;
+				currentTypeCheckStack.pop();
+			}
+		}
+	}
+
+	// Reports semantical error if happened
+	if(!validAnalysis)
+	{
+		handleError(SEMANTICAL_ERROR,(fileName + ":" + to_string(errorLineNumber) + ": " + errorMessage));
 	}
 
 	// Returns whether the analysis was successful or not
@@ -892,7 +1049,7 @@ void trimLexemes(vector<lexeme> & lexemes)
 }
 
 // Converts a list of lexemes into string
-string lexemesToString(vector<lexeme> lexemes)
+string lexemesToString(vector<lexeme> & lexemes)
 {
 	ostringstream buffer;
 	buffer << "\nLexemes: " << lexemes.size() << endl << endl;
@@ -907,17 +1064,18 @@ string lexemesToString(vector<lexeme> lexemes)
 // Token functions
 
 // Creates a token
-token createToken(tokenType type, int lineNumber, string attribute)
+token createToken(tokenType type, int lineNumber, string attribute, string extra)
 {
 	token newToken;
 	newToken.type = type;
 	newToken.lineNumber = lineNumber;
 	newToken.attribute = attribute;
+	newToken.extra = extra;
 	return newToken;
 }
 
 // Converts a list of tokens into string
-string tokensToString(vector<token> tokens, bool prettyPrint)
+string tokensToString(vector<token> & tokens, bool prettyPrint)
 {
 	ostringstream buffer;
 	token aux;
@@ -927,7 +1085,7 @@ string tokensToString(vector<token> tokens, bool prettyPrint)
 		for(int tokenIndex = 0; tokenIndex < tokens.size(); tokenIndex++)
 		{
 			aux = tokens[tokenIndex];
-			buffer << "\t" << (tokenIndex + 1) << ":\n\t\t<type: " << tokenTypeToString(aux.type) << " | lineNumber: " << aux.lineNumber << ((aux.attribute.length() > 0) ? (" | attribute: " + aux.attribute) : EMPTY_STRING) << ">" << endl;
+			buffer << "\t" << (tokenIndex + 1) << ":\n\t\t<type: " << tokenTypeToString(aux.type) << " | lineNumber: " << aux.lineNumber << ((aux.attribute.length() > 0) ? (" | attribute: " + aux.attribute) : EMPTY_STRING) << ((aux.extra.length() > 0) ? (" | extra: " + aux.extra) : EMPTY_STRING) << ">" << endl;
 		}
 	}
 	else
@@ -935,7 +1093,7 @@ string tokensToString(vector<token> tokens, bool prettyPrint)
 		for(int tokenIndex = 0; tokenIndex < tokens.size(); tokenIndex++)
 		{
 			aux = tokens[tokenIndex];
-			buffer << "<" << tokenTypeToString(aux.type) << ((aux.attribute.length() > 0) ? (", " +aux.attribute) : EMPTY_STRING) << ">" << endl;
+			buffer << "<" << tokenTypeToString(aux.type) << ((aux.attribute.length() > 0) ? (", " + aux.attribute) : EMPTY_STRING) << ((aux.extra.length() > 0) ? (", " + aux.extra) : EMPTY_STRING) << ">" << endl;
 		}
 	}
 	return buffer.str();
@@ -980,8 +1138,14 @@ string tokenTypeToString(tokenType type)
 		case TT_ELSE:
 			typeString = "ELSE";
 			break;
+		case TT_END_IF:
+			typeString = "END_IF";
+			break;
 		case TT_WHILE:
 			typeString = "WHILE";
+			break;
+		case TT_END_WHILE:
+			typeString = "END_WHILE";
 			break;
 		case TT_DO:
 			typeString = "DO";
@@ -1234,6 +1398,7 @@ string findFixedAttibuteNameForToken(tokenType type, int attributeNumber)
 
 // Pseudo token functions
 
+// Creates a pseudo token
 pseudoToken createPseudoToken(string attribute, int lineNumber, string original)
 {
 	pseudoToken newPseudoToken;
@@ -1366,50 +1531,50 @@ stack<string> getSymbolsStack()
 // Check if a given symbol is nonterminal
 bool isSymbolNonterminal(string symbol)
 {
-	return symbol.compare(LL1_GRAMMAR_DELIMITER) == EQUAL_STRINGS
-			|| symbol.compare("PROGRAM") == EQUAL_STRINGS 
-			|| symbol.compare("BLOCK") == EQUAL_STRINGS
-			|| symbol.compare("BLOCK_EXTENSION") == EQUAL_STRINGS
-			|| symbol.compare("BLOCK_SECOND_EXTENSION") == EQUAL_STRINGS
-			|| symbol.compare("VARIABLES_DECLARATION_STAGE") == EQUAL_STRINGS
-			|| symbol.compare("VARIABLES_DECLARATION_STAGE_AUX") == EQUAL_STRINGS
-			|| symbol.compare("VARIABLES_DECLARATION_STAGE_AUX_EXTENSION") == EQUAL_STRINGS
-			|| symbol.compare("VARIABLES_DECLARATION") == EQUAL_STRINGS
-			|| symbol.compare("VARIABLES_DECLARATION_EXTENSION") == EQUAL_STRINGS
-			|| symbol.compare("TYPE") == EQUAL_STRINGS
-			|| symbol.compare("SUB-ROUTINES_DECLARATION_STAGE") == EQUAL_STRINGS
-			|| symbol.compare("SUB-ROUTINES_DECLARATION_STAGE_EXTENSION") == EQUAL_STRINGS
-			|| symbol.compare("PROCEDURE_DECLARATION") == EQUAL_STRINGS
-			|| symbol.compare("FUNCTION_DECLARATION") == EQUAL_STRINGS
-			|| symbol.compare("COMMANDS") == EQUAL_STRINGS
-			|| symbol.compare("COMMANDS_AUX") == EQUAL_STRINGS
-			|| symbol.compare("COMMANDS_AUX_EXTENSION") == EQUAL_STRINGS
-			|| symbol.compare("COMMANDS_AUX_SECOND_EXTENSION") == EQUAL_STRINGS
-			|| symbol.compare("COMMAND") == EQUAL_STRINGS
-			|| symbol.compare("PROCEDURE_CALL_OR_ATTRIBUTION_COMMAND") == EQUAL_STRINGS
-			|| symbol.compare("ATTRIBUTION_COMMAND") == EQUAL_STRINGS
-			|| symbol.compare("ATTRIBUTION_TYPE") == EQUAL_STRINGS
-			|| symbol.compare("CONDITIONAL_COMMAND_IF") == EQUAL_STRINGS
-			|| symbol.compare("CONDITIONAL_COMMAND_ELSE") == EQUAL_STRINGS
-			|| symbol.compare("WHILE_COMMAND") == EQUAL_STRINGS
-			|| symbol.compare("READ_COMMAND") == EQUAL_STRINGS
-			|| symbol.compare("WRITE_COMMAND") == EQUAL_STRINGS
-			|| symbol.compare("WRITE_COMMAND_EXTENSION") == EQUAL_STRINGS
-			|| symbol.compare("EXPRESSION") == EQUAL_STRINGS
-			|| symbol.compare("EXPRESSION_EXTENSION") == EQUAL_STRINGS
-			|| symbol.compare("RELATIONAL_LOGICAL_OPERATOR") == EQUAL_STRINGS
-			|| symbol.compare("SIMPLE_EXPRESSION") == EQUAL_STRINGS
-			|| symbol.compare("FACTOR") == EQUAL_STRINGS
-			|| symbol.compare("VARIABLE") == EQUAL_STRINGS
-			|| symbol.compare("FUNCTION_RETURN") == EQUAL_STRINGS
-			|| symbol.compare("FUNCTION_RETURN_EXTENSION") == EQUAL_STRINGS
-			|| symbol.compare("IDENTIFIER") == EQUAL_STRINGS
-			|| symbol.compare("IDENTIFIER_EXTENSION") == EQUAL_STRINGS
-			|| symbol.compare("IDENTIFIER_SECOND_EXTENSION") == EQUAL_STRINGS
-			|| symbol.compare("NUMBER") == EQUAL_STRINGS
-			|| symbol.compare("NUMBER_EXTENSION") == EQUAL_STRINGS
-			|| symbol.compare("DIGIT") == EQUAL_STRINGS
-			|| symbol.compare("LETTER") == EQUAL_STRINGS;
+	return symbol.compare(GR_PROGRAM) == EQUAL_STRINGS 
+			|| symbol.compare(GR_BLOCK) == EQUAL_STRINGS
+			|| symbol.compare(GR_BLOCK_EXTENSION) == EQUAL_STRINGS
+			|| symbol.compare(GR_BLOCK_SECOND_EXTENSION) == EQUAL_STRINGS
+			|| symbol.compare(GR_VARIABLES_DECLARATION_STAGE) == EQUAL_STRINGS
+			|| symbol.compare(GR_VARIABLES_DECLARATION_STAGE_AUX) == EQUAL_STRINGS
+			|| symbol.compare(GR_VARIABLES_DECLARATION_STAGE_AUX_EXTENSION) == EQUAL_STRINGS
+			|| symbol.compare(GR_VARIABLES_DECLARATION) == EQUAL_STRINGS
+			|| symbol.compare(GR_VARIABLES_DECLARATION_EXTENSION) == EQUAL_STRINGS
+			|| symbol.compare(GR_TYPE) == EQUAL_STRINGS
+			|| symbol.compare(GR_SUB_ROUTINES_DECLARATION_STAGE) == EQUAL_STRINGS
+			|| symbol.compare(GR_SUB_ROUTINES_DECLARATION_STAGE_EXTENSION) == EQUAL_STRINGS
+			|| symbol.compare(GR_PROCEDURE_DECLARATION) == EQUAL_STRINGS
+			|| symbol.compare(GR_FUNCTION_DECLARATION) == EQUAL_STRINGS
+			|| symbol.compare(GR_COMMANDS) == EQUAL_STRINGS
+			|| symbol.compare(GR_COMMANDS_AUX) == EQUAL_STRINGS
+			|| symbol.compare(GR_COMMANDS_AUX_EXTENSION) == EQUAL_STRINGS
+			|| symbol.compare(GR_COMMANDS_AUX_SECOND_EXTENSION) == EQUAL_STRINGS
+			|| symbol.compare(GR_COMMAND) == EQUAL_STRINGS
+			|| symbol.compare(GR_COMMAND_EXTENSION) == EQUAL_STRINGS
+			|| symbol.compare(GR_PROCEDURE_CALL_OR_ATTRIBUTION_COMMAND) == EQUAL_STRINGS
+			|| symbol.compare(GR_ATTRIBUTION_COMMAND) == EQUAL_STRINGS
+			|| symbol.compare(GR_ATTRIBUTION_TYPE) == EQUAL_STRINGS
+			|| symbol.compare(GR_CONDITIONAL_COMMAND) == EQUAL_STRINGS
+			|| symbol.compare(GR_CONDITIONAL_COMMAND_EXTENSION) == EQUAL_STRINGS
+			|| symbol.compare(GR_WHILE_COMMAND) == EQUAL_STRINGS
+			|| symbol.compare(GR_READ_COMMAND) == EQUAL_STRINGS
+			|| symbol.compare(GR_WRITE_COMMAND) == EQUAL_STRINGS
+			|| symbol.compare(GR_WRITE_COMMAND_EXTENSION) == EQUAL_STRINGS
+			|| symbol.compare(GR_EXPRESSION) == EQUAL_STRINGS
+			|| symbol.compare(GR_EXPRESSION_EXTENSION) == EQUAL_STRINGS
+			|| symbol.compare(GR_RELATIONAL_LOGICAL_OPERATOR) == EQUAL_STRINGS
+			|| symbol.compare(GR_SIMPLE_EXPRESSION) == EQUAL_STRINGS
+			|| symbol.compare(GR_FACTOR) == EQUAL_STRINGS
+			|| symbol.compare(GR_VARIABLE) == EQUAL_STRINGS
+			|| symbol.compare(GR_FUNCTION_RETURN) == EQUAL_STRINGS
+			|| symbol.compare(GR_FUNCTION_RETURN_EXTENSION) == EQUAL_STRINGS
+			|| symbol.compare(GR_IDENTIFIER) == EQUAL_STRINGS
+			|| symbol.compare(GR_IDENTIFIER_EXTENSION) == EQUAL_STRINGS
+			|| symbol.compare(GR_IDENTIFIER_SECOND_EXTENSION) == EQUAL_STRINGS
+			|| symbol.compare(GR_NUMBER) == EQUAL_STRINGS
+			|| symbol.compare(GR_NUMBER_EXTENSION) == EQUAL_STRINGS
+			|| symbol.compare(GR_DIGIT) == EQUAL_STRINGS
+			|| symbol.compare(GR_LETTER) == EQUAL_STRINGS;
 }
 
 // Extracts all symbols from a given rule
@@ -1432,6 +1597,432 @@ vector<string> getSymbolsFromRule(string rule)
 	symbols.push_back(buffer);
 	reverse(symbols.begin(),symbols.end());
 	return symbols;
+}
+
+// Symbol, symbol table and semantical analysis functions
+
+// Creates a symbol
+symbol createSymbol(symbolCategory category, symbolType type, int number, string name, string scope, string value)
+{
+	symbol newSymbol;
+	newSymbol.category = category;
+	newSymbol.type = type;
+	newSymbol.number = number;
+	newSymbol.name = name;
+	newSymbol.scope = scope;
+	newSymbol.value = value;
+	return newSymbol;
+}
+
+// Converts the symbol category to string
+string symbolCategoryToString(symbolCategory category)
+{
+	string categoryString;
+	switch(category)
+	{
+		case SC_VAR:
+			categoryString = "VAR";
+			break;
+		case SC_PROGRAM:
+			categoryString = "PROGRAM";
+			break;
+		case SC_PROCEDURE:
+			categoryString = "PROCEDURE";
+			break;
+		case SC_FUNCTION:
+			categoryString = "FUNCTION";
+			break;
+		default:
+			categoryString = "UNKNOWN";
+			break;
+	}
+	return categoryString;
+}
+
+// Converts the symbol type to string
+string symbolTypeToString(symbolType type)
+{
+	string typeString;
+	switch(type)
+	{
+		case ST_INTEGER:
+			typeString = "INTEGER";
+			break;
+		case ST_BOOLEAN:
+			typeString = "BOOLEAN";
+			break;
+		case ST_NONE:
+			typeString = "NONE";
+			break;
+		default:
+			typeString = "UNKNOWN";
+			break;
+	}
+	return typeString;
+}
+
+// Converts a token type to symbol type
+symbolType tokenTypeToSymbolType(tokenType type)
+{
+	symbolType aux;
+	switch(type)
+	{
+		case TT_INTEGER:
+			aux = ST_INTEGER;
+			break;
+		case TT_BOOLEAN:
+			aux = ST_BOOLEAN;
+			break;
+		default:
+			aux = ST_NONE;
+			break;
+	}
+	return aux;
+}
+
+// Gets the global symbol table from a list of tokens
+vector<symbol> getSymbolTableFromTokens(vector<token> & tokens)
+{
+	int currentNumber = 0;
+	bool pushSymbol;
+	string currentName, currentScope, currentValue;
+	vector<symbol> symbolTable;
+	stack<string> scopesStack;
+	symbolCategory currentCategory;
+	symbolType currentType;
+	for(int tokenIndex = 0; tokenIndex < tokens.size(); tokenIndex++)
+	{
+		pushSymbol = false;
+		token currentToken = tokens[tokenIndex];
+		switch(currentToken.type)
+		{
+			case TT_PROGRAM:
+				pushSymbol = true;
+				currentCategory = SC_PROGRAM;
+				currentType = ST_NONE;
+				currentName = tokens[tokenIndex + 1].attribute;
+				scopesStack.push(tokens[tokenIndex + 1].attribute);
+				currentScope = "GLOBAL (" + scopesStack.top() + ")";
+				currentValue = "NONE";
+				break;
+			case TT_PROCEDURE:
+				pushSymbol = true;
+				currentCategory = SC_PROCEDURE;
+				currentType = ST_NONE;
+				currentName = tokens[tokenIndex + 1].attribute;
+				currentScope = "GLOBAL (" + scopesStack.top() + ")";
+				scopesStack.push(tokens[tokenIndex + 1].attribute);
+				currentValue = "NONE";
+				break;
+			case TT_FUNCTION:
+				pushSymbol = true;
+				currentCategory = SC_FUNCTION;
+				currentType = tokenTypeToSymbolType(tokens[tokenIndex + 3].type);
+				currentName = tokens[tokenIndex + 1].attribute;
+				currentScope = "GLOBAL (" + scopesStack.top() + ")";
+				scopesStack.push(tokens[tokenIndex + 1].attribute);
+				currentValue = "NONE";
+				break;
+			case TT_END:
+				scopesStack.pop();
+				break;
+			case TT_VAR:
+				currentCategory = SC_VAR;
+				currentValue = "VALUE ()";
+				int innerTokenIndex = tokenIndex;
+				token innerCurrentToken;
+				while(true)
+				{
+					int auxiliaryIndex = innerTokenIndex;
+					while(true)
+					{
+						innerCurrentToken = tokens[auxiliaryIndex++];
+						if(innerCurrentToken.type == TT_INTEGER || innerCurrentToken.type == TT_BOOLEAN)
+						{
+							currentType = tokenTypeToSymbolType(innerCurrentToken.type);
+							break;
+						}
+					}
+					while(true)
+					{
+						innerCurrentToken = tokens[innerTokenIndex++];
+						if(innerCurrentToken.type == TT_IDENTIFIER)
+						{
+							currentName = innerCurrentToken.attribute;
+							currentScope = string(((scopesStack.size() == 1) ? "GLOBAL" : "LOCAL")) + " (" + scopesStack.top() + ")";
+							symbolTable.push_back(createSymbol(currentCategory,currentType,currentNumber++,currentName,currentScope,currentValue));
+						}
+						else if(innerCurrentToken.type == TT_PUNCTUATION && innerCurrentToken.attribute.compare(SA_SEMICOLON) == EQUAL_STRINGS)
+						{
+							break;
+						}
+					}
+					if(tokens[innerTokenIndex].type != TT_IDENTIFIER)
+					{
+						break;
+					}
+				}
+				
+				break;
+		}
+		if(pushSymbol)
+		{
+			symbolTable.push_back(createSymbol(currentCategory,currentType,currentNumber++,currentName,currentScope,currentValue));
+		}
+	}
+	return symbolTable;
+}
+
+// Checks if a symbol exists through its number in the symbol table
+bool doesSymbolExist(vector<symbol> & symbolTable, int number)
+{
+	bool result = false;
+	for(int symbolIndex = 0; symbolIndex < symbolTable.size(); symbolIndex++)
+	{
+		if(symbolTable[symbolIndex].number == number)
+		{
+			result = true;
+			break;
+		}
+	}
+	return result;
+}
+
+// Retrieves a symbol through its number from the symbol table
+symbol getSymbolFromSymbolTable(vector<symbol> & symbolTable, int number)
+{
+	symbol result;
+	for(int symbolIndex = 0; symbolIndex < symbolTable.size(); symbolIndex++)
+	{
+		if(symbolTable[symbolIndex].number == number)
+		{
+			result = symbolTable[symbolIndex];
+		}
+	}
+	return result;
+}
+
+// Removes a symbol through its number from the symbol table
+bool removeSymbolFromSymbolTable(vector<symbol> & symbolTable, int number)
+{
+	bool result = false;
+	for(int symbolIndex = 0; symbolIndex < symbolTable.size(); symbolIndex++)
+	{
+		if(symbolTable[symbolIndex].number == number)
+		{
+			symbolTable.erase(symbolTable.begin() + symbolIndex--);
+			result = true;
+			break;
+		}
+	}
+	return result;
+}
+
+// Updates a symbol in the symbol table
+bool updateSymbolToSymbolTable(vector<symbol> & symbolTable, symbol instance)
+{
+	bool result = false;
+	for(int symbolIndex = 0; symbolIndex < symbolTable.size(); symbolIndex++)
+	{
+		if(symbolTable[symbolIndex].number == instance.number)
+		{
+			symbolTable[symbolIndex].name = instance.name;
+			symbolTable[symbolIndex].value = instance.value;
+			symbolTable[symbolIndex].scope = instance.scope;
+			symbolTable[symbolIndex].category = instance.category;
+			symbolTable[symbolIndex].type = instance.type;
+			result = true;
+			break;
+		}
+	}
+	return result;
+}
+
+// Converts a symbol table into string
+string symbolTableToString(vector<symbol> & symbolTable, bool prettyPrint)
+{
+	ostringstream buffer;
+	symbol aux;
+	if(prettyPrint)
+	{
+		buffer << "\nSymbol Table: " << symbolTable.size() << endl << endl;
+		buffer << format("\t%8s\t%8s\t%8s\t%8s\t%8s\t%8s\n") % "#" % "Name" % "Value" % "Scope" % "Category" % "Type";
+		for(int symbolIndex = 0; symbolIndex < symbolTable.size(); symbolIndex++)
+		{
+			aux = symbolTable[symbolIndex];
+			buffer << format("\t%8s\t%8s\t%8s\t%8s\t%8s\t%8s\n") % aux.number % aux.name % aux.value % aux.scope % symbolCategoryToString(aux.category) % symbolTypeToString(aux.type);
+		}
+	}
+	else
+	{
+		buffer << format("%8s\t%8s\t%8s\t%8s\t%8s\t%8s\n") % "#" % "Name" % "Value" % "Scope" % "Category" % "Type";
+		for(int symbolIndex = 0; symbolIndex < symbolTable.size(); symbolIndex++)
+		{
+			aux = symbolTable[symbolIndex];
+			buffer << format("%8s\t%8s\t%8s\t%8s\t%8s\t%8s\n") % aux.number % aux.name % aux.value % aux.scope % symbolCategoryToString(aux.category) % symbolTypeToString(aux.type);
+		}
+	}
+	return buffer.str();
+}
+
+// Retrieves the type check stack for a list of tokens, its current index and scopes stack
+stack<innerVector> getTypeCheckStackForToken(vector<token> & tokens, int tokenIndex, stack<token> & scopesStack)
+{
+	int innerTokenIndex;
+	token currentToken;
+	stack<innerVector> typeCheckStack;
+	vector<token> currentExpressionList;
+	switch(tokens[tokenIndex].type)
+	{
+		case TT_IF:	
+			innerTokenIndex = tokenIndex + 2;
+			while(true)
+			{
+				currentToken = tokens[innerTokenIndex++];
+				if(currentToken.type == TT_THEN)
+				{
+					if(currentExpressionList.size() > 0)
+					{
+						typeCheckStack.push(currentExpressionList);
+					}
+					currentExpressionList.clear();
+					break;
+				}
+				else if(currentToken.type != TT_RELATIONAL_LOGICAL_OPERATOR && currentToken.type != TT_PUNCTUATION)
+				{
+					currentExpressionList.push_back(currentToken);
+				}
+				else if(currentToken.attribute.compare(SA_LEFT_PARENTHESES) == EQUAL_STRINGS)
+				{
+					if(currentExpressionList.size() > 0)
+					{
+						typeCheckStack.push(currentExpressionList);
+					}
+					currentExpressionList.clear();
+				}
+			}
+			break;
+		case TT_WHILE:
+			innerTokenIndex = tokenIndex + 2;
+			while(true)
+			{
+				currentToken = tokens[innerTokenIndex++];
+				if(currentToken.type == TT_DO)
+				{
+					if(currentExpressionList.size() > 0)
+					{
+						typeCheckStack.push(currentExpressionList);
+					}
+					currentExpressionList.clear();
+					break;
+				}
+				else if(currentToken.type != TT_RELATIONAL_LOGICAL_OPERATOR && currentToken.type != TT_PUNCTUATION)
+				{
+					currentExpressionList.push_back(currentToken);
+				}
+				else if(currentToken.attribute.compare(SA_LEFT_PARENTHESES) == EQUAL_STRINGS)
+				{
+					if(currentExpressionList.size() > 0)
+					{
+						typeCheckStack.push(currentExpressionList);
+					}
+					currentExpressionList.clear();
+				}
+			}
+			break;
+		case TT_ASSIGNMENT_OPERATOR:
+			currentExpressionList.push_back(tokens[tokenIndex - 1]);
+			typeCheckStack.push(currentExpressionList);
+			currentExpressionList.clear();
+			innerTokenIndex = tokenIndex + 1;
+			while(true)
+			{
+				currentToken = tokens[innerTokenIndex++];
+				if((currentToken.type == TT_PUNCTUATION && currentToken.attribute.compare(SA_SEMICOLON) == EQUAL_STRINGS))
+				{
+					if(currentExpressionList.size() > 0)
+					{
+						typeCheckStack.push(currentExpressionList);
+					}
+					currentExpressionList.clear();
+					break;
+				}
+				else if(currentToken.type != TT_RELATIONAL_LOGICAL_OPERATOR && currentToken.type != TT_PUNCTUATION)
+				{
+					currentExpressionList.push_back(currentToken);
+				}
+				else if(currentToken.attribute.compare(SA_LEFT_PARENTHESES) == EQUAL_STRINGS)
+				{
+					if(currentExpressionList.size() > 0)
+					{
+						typeCheckStack.push(currentExpressionList);
+					}
+					currentExpressionList.clear();
+				}
+			}
+			break;
+		case TT_RETURN:
+			currentExpressionList.push_back(scopesStack.top());
+			typeCheckStack.push(currentExpressionList);
+			currentExpressionList.clear();
+			innerTokenIndex = tokenIndex + 1;
+			while(true)
+			{
+				currentToken = tokens[innerTokenIndex++];
+				if((currentToken.type == TT_PUNCTUATION && currentToken.attribute.compare(SA_SEMICOLON) == EQUAL_STRINGS))
+				{
+					if(currentExpressionList.size() > 0)
+					{
+						typeCheckStack.push(currentExpressionList);
+					}
+					currentExpressionList.clear();
+					break;
+				}
+				else if(currentToken.type != TT_RELATIONAL_LOGICAL_OPERATOR && currentToken.type != TT_PUNCTUATION)
+				{
+					currentExpressionList.push_back(currentToken);
+				}
+				else if(currentToken.attribute.compare(SA_LEFT_PARENTHESES) == EQUAL_STRINGS)
+				{
+					if(currentExpressionList.size() > 0)
+					{
+						typeCheckStack.push(currentExpressionList);
+					}
+					currentExpressionList.clear();
+				}
+			}
+			break;
+	}
+	return typeCheckStack;
+}
+
+// Retrieves the type check list from a list of tokens
+vector<innerStack> getTypeCheckListFromTokens(vector<token> & tokens)
+{
+	vector<innerStack> typeCheckList;
+	stack<token> scopesStack;
+	for(int tokenIndex = 0; tokenIndex < tokens.size(); tokenIndex++)
+	{
+		token currentToken = tokens[tokenIndex];
+		switch(currentToken.type)
+		{
+			case TT_IF:
+			case TT_WHILE:
+			case TT_ASSIGNMENT_OPERATOR:
+			case TT_RETURN:
+				typeCheckList.push_back(getTypeCheckStackForToken(tokens,tokenIndex,scopesStack));
+				break;
+			case TT_PROGRAM:
+			case TT_PROCEDURE:
+			case TT_FUNCTION:
+				scopesStack.push(tokens[tokenIndex + 1]);
+				break;
+			case TT_END:
+				scopesStack.pop();
+				break;
+		}
+	}
+	return typeCheckList;
 }
 
 // Debug functions

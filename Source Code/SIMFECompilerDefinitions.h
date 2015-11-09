@@ -94,6 +94,53 @@
 #define SA_QUOTE "\""
 #define FIXED_ATTRIBUTE_NOT_FOUND -1
 
+// Grammar rules (non-terminal symbols) constants
+
+#define GR_PROGRAM "PROGRAM"
+#define GR_BLOCK "BLOCK"
+#define GR_BLOCK_EXTENSION "BLOCK_EXTENSION"
+#define GR_BLOCK_SECOND_EXTENSION "BLOCK_SECOND_EXTENSION"
+#define GR_VARIABLES_DECLARATION_STAGE "VARIABLES_DECLARATION_STAGE"
+#define GR_VARIABLES_DECLARATION_STAGE_AUX "VARIABLES_DECLARATION_STAGE_AUX"
+#define GR_VARIABLES_DECLARATION_STAGE_AUX_EXTENSION "VARIABLES_DECLARATION_STAGE_AUX_EXTENSION"
+#define GR_VARIABLES_DECLARATION "VARIABLES_DECLARATION"
+#define GR_VARIABLES_DECLARATION_EXTENSION "VARIABLES_DECLARATION_EXTENSION"
+#define GR_TYPE "TYPE"
+#define GR_SUB_ROUTINES_DECLARATION_STAGE "SUB-ROUTINES_DECLARATION_STAGE"
+#define GR_SUB_ROUTINES_DECLARATION_STAGE_EXTENSION "SUB-ROUTINES_DECLARATION_STAGE_EXTENSION"
+#define GR_PROCEDURE_DECLARATION "PROCEDURE_DECLARATION"
+#define GR_FUNCTION_DECLARATION "FUNCTION_DECLARATION"
+#define GR_COMMANDS "COMMANDS"
+#define GR_COMMANDS_AUX "COMMANDS_AUX"
+#define GR_COMMANDS_AUX_EXTENSION "COMMANDS_AUX_EXTENSION"
+#define GR_COMMANDS_AUX_SECOND_EXTENSION "COMMANDS_AUX_SECOND_EXTENSION"
+#define GR_COMMAND "COMMAND"
+#define GR_COMMAND_EXTENSION "COMMAND_EXTENSION"
+#define GR_PROCEDURE_CALL_OR_ATTRIBUTION_COMMAND "PROCEDURE_CALL_OR_ATTRIBUTION_COMMAND"
+#define GR_ATTRIBUTION_COMMAND "ATTRIBUTION_COMMAND"
+#define GR_ATTRIBUTION_TYPE "ATTRIBUTION_TYPE"
+#define GR_CONDITIONAL_COMMAND "CONDITIONAL_COMMAND"
+#define GR_CONDITIONAL_COMMAND_EXTENSION "CONDITIONAL_COMMAND_EXTENSION"
+#define GR_WHILE_COMMAND "WHILE_COMMAND"
+#define GR_READ_COMMAND "READ_COMMAND"
+#define GR_WRITE_COMMAND "WRITE_COMMAND"
+#define GR_WRITE_COMMAND_EXTENSION "WRITE_COMMAND_EXTENSION"
+#define GR_EXPRESSION "EXPRESSION"
+#define GR_EXPRESSION_EXTENSION "EXPRESSION_EXTENSION"
+#define GR_RELATIONAL_LOGICAL_OPERATOR "RELATIONAL_LOGICAL_OPERATOR"
+#define GR_SIMPLE_EXPRESSION "SIMPLE_EXPRESSION"
+#define GR_FACTOR "FACTOR"
+#define GR_VARIABLE "VARIABLE"
+#define GR_FUNCTION_RETURN "FUNCTION_RETURN"
+#define GR_FUNCTION_RETURN_EXTENSION "FUNCTION_RETURN_EXTENSION"
+#define GR_IDENTIFIER "IDENTIFIER"
+#define GR_IDENTIFIER_EXTENSION "IDENTIFIER_EXTENSION"
+#define GR_IDENTIFIER_SECOND_EXTENSION "IDENTIFIER_SECOND_EXTENSION"
+#define GR_NUMBER "NUMBER"
+#define GR_NUMBER_EXTENSION "NUMBER_EXTENSION"
+#define GR_DIGIT "DIGIT"
+#define GR_LETTER "LETTER"
+
 // Custom types
 
 // Enumerated type that represents token's classes
@@ -110,7 +157,9 @@ typedef enum tokenType
 	TT_IF,
 	TT_THEN,
 	TT_ELSE,
+	TT_END_IF,
 	TT_WHILE,
+	TT_END_WHILE,
 	TT_DO,
 	TT_READ,
 	TT_WRITE,
@@ -148,7 +197,9 @@ typedef enum keywordsRecognizerFinalStates
 	FS_TRUE = 85,
 	FS_FALSE = 88,
 	FS_RETURN = 95,
-	FS_NOT = 98
+	FS_NOT = 98,
+	FS_END_IF = 100,
+	FS_END_WHILE = 108
 }keywordsRecognizerFinalStates;
 
 // Enumerated type that represents all of the relational logical operators recognizer's final states
@@ -164,7 +215,6 @@ typedef enum relationalLogicalOperatorsRecognizerFinalStates
 	FS_OR = 9,
 	FS_PLUS = 10,
 	FS_MINUS = 11
-
 }relationalLogicalOperatorsRecognizerFinalStates;
 
 // Enumerated type that represents all of the punctuations recognizer's final states
@@ -180,7 +230,6 @@ typedef enum punctuationsRecognizerFinalStates
 	FS_DECREMENTER = 8,
 	FS_COMMA = 9,
 	FS_QUOTE = 10
-
 }punctuationsRecognizerFinalStates;
 
 // Enumerated type that represents all of the possible compiler errors
@@ -199,6 +248,23 @@ typedef enum errorType
 	INVALID_SIM_FILE_ERROR
 }errorType;
 
+// Enumerated type that represents all of the symbol categories
+typedef enum symbolCategory
+{
+	SC_VAR,
+	SC_PROGRAM,
+	SC_PROCEDURE,
+	SC_FUNCTION
+}symbolCategory;
+
+// Enumerated type that represents all of the symbol types
+typedef enum
+{
+	ST_INTEGER,
+	ST_BOOLEAN,
+	ST_NONE
+}symbolType;
+
 // Represents a lexeme containing its contents and corresponding line number
 typedef struct lexeme lexeme;
 struct lexeme
@@ -207,13 +273,14 @@ struct lexeme
 	int lineNumber;
 };
 
-// Represents a token containing its type, corresponding line number and optional attribute
+// Represents a token containing its type, corresponding line number, optional and extra attribute
 typedef struct token token;
 struct token
 {
 	tokenType type;
 	int lineNumber;
 	string attribute;
+	string extra;
 };
 
 // Represents a pseudo token containing its attribute, corresponding line number and original attribute (from token)
@@ -227,3 +294,21 @@ struct pseudoToken
 
 // Represents an inner map inside a map structure
 typedef map<string,string> innerMap;
+
+// Represents a symbol containing its category, type, number, name, value and scope
+typedef struct symbol symbol;
+struct symbol
+{
+	symbolCategory category;
+	symbolType type;
+	int number;
+	string name;
+	string scope;
+	string value;
+};
+
+// Represents an inner vector inside a stack structure
+typedef vector<token> innerVector;
+
+// Represents an inner stack inside a vector structure
+typedef stack<innerVector> innerStack;
