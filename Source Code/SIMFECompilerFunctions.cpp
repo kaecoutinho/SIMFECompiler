@@ -126,7 +126,7 @@ void showHelp()
 {
 	cout.precision(OUTPUT_PRECISION);
 	cout << "SIMFECompiler V" << fixed << COMPILER_VERSION << endl;
-	cout << "Created by Kaê Angeli Coutinho and Ricardo Oliete Ogata" << endl;
+	cout << "Created by Kaê Angeli Coutinho" << endl;
 	cout << "\n\tNumber of required arguments: 1" << endl;
 	cout << "\n\tArguments" << endl;
 	cout << "\n\t\t1 - SIM file path" << endl;
