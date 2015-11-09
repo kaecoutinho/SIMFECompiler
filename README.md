@@ -2,7 +2,7 @@
 
 **SIMFECompiler**'s repository
 
-Created by Kaê Angeli Coutinho and Ricardo Oliete Ogata
+Created by Kaê Angeli Coutinho
 
 _MIT license_
 
