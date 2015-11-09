@@ -1,6 +1,6 @@
 // SIMFECompilerDependencies.h
 // SIMFECompiler
-// Created by Kaê Angeli Coutinho and Ricardo Oliete Ogata
+// Created by Kaê Angeli Coutinho
 // MIT license
 
 // Required system libraries
